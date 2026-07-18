@@ -1,71 +1,54 @@
-#include"ecfc.h"
+ï»¿// 2.subpopulation.cpp â€” å­ç§ç¾¤ / workflow å†…éƒ¨ç»“æž„ç”¨ä¾‹ï¼ˆå‚ç…§ç¨³å®šç‰ˆ 2.subpopulation.cpp,é€‚é… v3.12ï¼‰
+//   åœ¨ 1.optimizerconfig çš„å•ç®—å­åŸºç¡€ä¸Š,æ¼”ç¤º:
+//     â‘  å¤šæ®µ workflow â€”â€” ä¸€æ¡ workflow å†…ã€Œäº¤å‰æ®µ + å˜å¼‚æ®µã€ä¸²è”(GA çš„ç»„ç»‡æ–¹å¼);
+//     â‘¡ å­ç§ç¾¤è®¿é—® â€”â€” è£…é…åŽç» opt->getSubswarm(id) æ‹¿åˆ° Subpopulation å±‚å¯¹è±¡ã€‚
+//   æž„å»º: build.ps1 tutorial\2.subpopulation.cpp   è¾“å‡ºè‹±æ–‡(çºªå¾‹ 6)ã€‚
+#include <cstdio>
+#include "ecflow.h"
+using namespace ECFlow;
 
-long long int buffer;
-
-double f1(double** a)
-{
-	double back = 0;
-	for (int i = 0; i < 5; i++)
-	{
-		back += a[0][i] * a[0][i];
-	}
-	return back;
-}
-
-double heuristic(double** input)
-{
-	return -1 * abs(input[1][0]);
-}
+static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 
 int main()
 {
-	// ÎÊÌâ¶¨Òå
-	ECFC::Problem problem("test_problem");
-	// Ìí¼Ó±äÁ¿
-	problem.addVariable("x", -5, 5, 0.001, 5);
-	// Ìí¼ÓÄ¿±êº¯Êý£¬f1×îÐ¡»¯£¬f2×î´ó»¯
-	problem.addObjective("f1", 1, true, "x", f1);
-	// Ìí¼ÓÆô·¢º¯Êý£¬x¾ø¶ÔÖµµÄ¸ºÖµ,yËæ»úÆô·¢Ê½£¨Ä¬ÈÏ£¬¿ÉÒÔÈ±Ê¡ÉèÖÃ£©
-	problem.addInspirationFunc("x", "x", heuristic);
-	// Ìí¼ÓÔ¼Êø
-	problem.addConstrainUnique("x", 1);
-	problem.addConstrainRange("x", ECFC::EMPTYVALUE, ECFC::EMPTYVALUE, 1);
+    const int N = 5, POP = 40, FES = 40000;
 
-	// ÎÊÌâ±àÒë
-	ECFC::ProblemHandle* problem_handle = problem.compile();
+    Problem p("sphere");
+    p.addVariable("x", -5.0, 5.0, 0.01, N);
+    p.addObjective("f", 1, true, "x", f_sphere);
 
-	// ÓÅ»¯Æ÷¹¹½¨
-	ECFC::OptimizerBuilder builder;
-	builder.setName("test_optimizer");
-	builder.setIndividual(ECFC::IndividualType::F_individual);
-	builder.setArchive(ECFC::BestArchiveType::F_normal);
-	builder.setTerminateMAXFES(1e3);
-	// builder.setTerminateMAXTime(1);
-	// builder.setTerminateMAXStop(100);
+    ConfigBuilder cb;
+    auto wf = cb.workflow("ga_wf");
+    wf.initializer("Random");
+    wf.topology.tournament(2, 1);                                  // äº¤å‰æ®µ:é”¦æ ‡èµ›é€‰äº²ä»£
+    wf.repair.boundary();
+    // â€”â€” æ®µ 1:äº¤å‰ â€”â€”ï¼ˆäº§å‡ºäº¤å‰å­ä»£,append è¿› offspringï¼‰
+    wf.strategy.sbxCrossover(20, 1.0);   wf.generator.generation();
+    // â€”â€” æ®µ 2:å˜å¼‚ â€”â€”ï¼ˆcontinueGraph ç»­æŽ¥æ®µ1äº§ç‰©,generation(true) åŽŸåœ°ä¸²è”å˜å¼‚ï¼‰
+    wf.topology.continueGraph();
+    wf.strategy.pmMutation(20, 0.01);    wf.generator.generation(true);
+    // â€”â€” æ®µæœ«:è¯„ä¼° + é€‰æ‹© â€”â€”ï¼ˆ(Î¼+Î») æ‹©ä¼˜å½’å¹¶ï¼‰
+    wf.evaluator.basic();
+    wf.selector.rank();
 
-	// µ±Ç°²âÊÔ½¨Á¢ÔÚµ¥ÖÖÈº»ù´¡ÉÏ
-	builder.setSwarmManager(ECFC::SubswarmManagerType::F_single);
-	// builder.setSwarmConstruct(ECFC::SubswarmConstructerType::F_fix);
-	// builder.setSwarmTopology(ECFC::SubswarmTopologyType::F_connected);
+    cb.name("ga_run").maxFES(FES).manager("Single").gArchive("Basic");
+    cb.subpopulation("1").size(POP)
+      .workflow("ga_wf").maxFES(FES).archive("Basic");
 
-	// Ìí¼ÓÖÖÈº
-	ECFC::SubpopulationSetter* sp_setter = builder.addSubpopulation("1");
-	sp_setter->setSwarmSize(20);
-	sp_setter->setSolutionIni(ECFC::InitializerType::F_random);
-	sp_setter->lstrategy.GA(sp_setter->lstrategy.crossover.point(), sp_setter->lstrategy.mutation.bit());
-	sp_setter->ltopology.championship();
-	sp_setter->setLFramework(ECFC::OffspringGeneratorType::F_generation);
-	sp_setter->setRepairMethod(ECFC::RepairType::F_random);
-	sp_setter->setSelector(ECFC::SelectorType::F_index, false);
-	sp_setter->setTerminateMAXFES(1e3);
-	// sp_setter->setTerminateMAXTime(1);
-	// sp_setter->setTerminateMAXStop(100);
-	sp_setter->setArchive(ECFC::BestArchiveType::F_normal);
+    Optimizer* opt = cb.buildOptimizer();
+    opt->setProblem(&p);
 
-	// ÈÕÖ¾ÉèÖÃ
-	builder.setLoggerFull(false);
-	builder.setLoggerProcess(false);
-	builder.saveConfigure();
+    // å­ç§ç¾¤å±‚è®¿é—®:è£…é…åŽå¯æŒ‰ id å–åˆ° Subpopulation(ç”Ÿæˆ+é€‰æ‹©çš„åŸºæœ¬å•å…ƒ)
+    Subpopulation* sp = opt->getSubswarm("1");
+    std::printf("subpopulation \"1\" found: %s\n", sp ? "yes" : "no");
 
-	return 0;
+    opt->exe(42);
+
+    Solution* best = nullptr; int bs = 0;
+    opt->getBest(best, bs);
+    std::printf("GA(SBX+PM, 2-segment) on sphere(5-D): best = %.6f\n", (best && bs > 0) ? best->fitness[0] : 1e18);
+
+    delete opt;
+    std::printf("\n2.subpopulation tutorial: DONE\n");
+    return 0;
 }

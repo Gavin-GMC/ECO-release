@@ -1,70 +1,60 @@
-/*#include"logger.h"
-#include"ecfc.h"
+﻿// 3.population-manager.cpp — 多子群协作用例（稳定版对应文件为空壳,此处按 v3.12 架构演示"种群管理"）
+//   演示:Population 顶层聚合下,多个**异构**子种群(一群 PSO + 一群 GA)由 SubpopulationManager 协调、
+//     全局档案汇集各子群最优。管理器=NoInteraction(各子群独立进化,全局仅汇集);另有 Immigrant(迁徙)等。
+//   构建: build.ps1 tutorial\3.population-manager.cpp   输出英文(纪律 6)。
+#include <cstdio>
+#include "ecflow.h"
+using namespace ECFlow;
 
-long long int buffer;
-
-double func(double** a)
-{
-	double back = 0;
-	for (int i = 0; i < 5; i++)
-	{
-		back += a[0][i] * a[0][i];
-	}
-	return back;
-}
-
-double heuristic(double** input)
-{
-	return abs(input[0][0]);
-}
-
+static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 
 int main()
 {
-	// ���ⶨ��
-	ECFC::Problem problem("test_problem");
-	problem.addVariable("x", -5, 5, 0.001, 5);
-	problem.addObjective("f1", 1, true, "x", func);
-	problem.addInspirationFunc("x", "x", heuristic);
+    const int N = 5, POP = 20, FES = 20000;
 
-	ECFC::ProblemHandle* handler = problem.compile();
+    Problem p("sphere");
+    p.addVariable("x", -5.0, 5.0, 0.01, N);
+    p.addObjective("f", 1, true, "x", f_sphere);
 
-	// �𼶹�������GA���п�ܲ���
-	ECFC::OptimizerBuilder builder;
-	builder.setName("test_optimizer");
-	builder.setIndividual(ECFC::IndividualType::F_individual);
-	builder.setSolutionIni(ECFC::InitializerType::F_random);
-	builder.lstrategy.GA(builder.lstrategy.crossover.point(), builder.lstrategy.mutation.bit());
-	builder.ltopology.championship();
-	builder.setLFramework(ECFC::OffspringGeneratorType::F_generation);
-	builder.setSelector(ECFC::SelectorType::F_index, false);
-	builder.setArchive(ECFC::BestArchiveType::F_normal);
+    ConfigBuilder cb;
 
-	builder.setSwarmNumber(1);
-	builder.setSwarmSize(20);
-	builder.setSwarmManager(ECFC::SubswarmManagerType::F_single);
-	// builder.setSwarmConstruct(ECFC::SubswarmConstructerType::F_fix);
-	// builder.setSwarmTopology(ECFC::SubswarmTopologyType::F_connected);
-	builder.setTerminateMAXFES(1e3);
-	// builder.setTerminateMAXTime(1);
-	// builder.setTerminateMAXStop(100);
-	builder.setLoggerFull(false);
-	builder.setLoggerProcess(true);
+    // 两条不同的 workflow:一条 PSO、一条 GA(展示子群可异构)
+    auto pso = cb.workflow("pso_wf");
+    pso.initializer("Random"); pso.topology.pgBest(); pso.repair.boundary();
+    pso.strategy.velocityDriven(2, 2.0, 0.9, 0.5 * POP / FES);
+    pso.generator.orderedConstruct(); pso.evaluator.basic(); pso.selector.index(false);
 
-	ECFC::Optimizer* optimizer = builder.build();
-	optimizer->setProblem(&problem);
+    auto ga = cb.workflow("ga_wf");
+    ga.initializer("Random"); ga.topology.tournament(2, 1); ga.repair.boundary();
+    ga.strategy.sbxCrossover(20, 1.0); ga.generator.generation();
+    ga.topology.continueGraph(); ga.strategy.pmMutation(20, 0.01); ga.generator.generation(true);
+    ga.evaluator.basic(); ga.selector.rank();
 
-	optimizer->exe();
-	optimizer->logResult();
+    // 优化器级 + 多子群协作:NoInteraction(独立进化+全局汇集) + Fixed 构建器 + Connected 拓扑
+    cb.name("multi_run").maxFES(FES).gArchive("Basic")
+      .manager("NoInteraction").cooperationConstructer("Fixed").cooperationTopology("Connected");
 
+    // 两个异构子群:pso 群用 Particle,ga 群用 Individual
+    cb.subpopulation("pso").size(POP)
+      .workflow("pso_wf").maxFES(FES).archive("Basic");
+    cb.subpopulation("ga").size(POP)
+      .workflow("ga_wf").maxFES(FES).archive("Basic");
 
-	return 0;
+    Optimizer* opt = cb.buildOptimizer();
+    opt->setProblem(&p);
+
+    std::printf("subpops found: pso=%s, ga=%s\n",
+                opt->getSubswarm("pso") ? "yes" : "no",
+                opt->getSubswarm("ga")  ? "yes" : "no");
+
+    opt->exe(42);
+
+    Solution* best = nullptr; int bs = 0;
+    opt->getBest(best, bs);                       // 全局档案:两子群最优的汇集
+    std::printf("multi-subpop (PSO + GA, NoInteraction) global best = %.6f\n",
+                (best && bs > 0) ? best->fitness[0] : 1e18);
+
+    delete opt;
+    std::printf("\n3.population-manager tutorial: DONE\n");
+    return 0;
 }
-*/
-
-///
-/// ָ����������
-/// ��Ⱥ������ʽ
-/// ����ϵͳ
-/// ��־����Թ��̺ͽ����������
-///

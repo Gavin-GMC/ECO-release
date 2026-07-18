@@ -1,0 +1,9 @@
+NAME: sample
+TYPE: MDS
+VERTICES: 5
+EDGES: 4
+EDGE_SECTION
+1 2
+2 3
+3 4
+4 5

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FC8ACCC1-E5A0-4883-B236-4817530CAADB}</ProjectGuid>
+    <RootNamespace>ecflow</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>..\..\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <TargetName>ecflow</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>..\..\src;..\..\src\basics;..\..\src\calculator;..\..\src\exprTree;..\..\src\solution;..\..\src\logger;..\..\src\cp;..\..\src\distribution;..\..\src\problem\core;..\..\src\problem\define;..\..\src\problem\manager;..\..\src\problem\variable;..\..\src\problem\objective;..\..\src\problem\constrain;..\..\src\problem\heuristic;..\..\src\problem\template;..\..\src\optimizer\core;..\..\src\optimizer\individual;..\..\src\optimizer\solution-op;..\..\src\optimizer\population;..\..\src\optimizer\subpopulation-constructer;..\..\src\optimizer\subpopulation-topology;..\..\src\optimizer\subpopulation-manager;..\..\src\optimizer\strategy;..\..\src\optimizer\topology;..\..\src\optimizer\generator;..\..\src\optimizer\selector;..\..\src\optimizer\evaluator;..\..\src\optimizer\terminator;..\..\src\optimizer\archive;..\..\src\optimizer\orchestrate;..\..\src\optimizer\config;..\..\src\multiobjective;..\..\src\analyzer;..\..\src\analyzer\out;..\..\_pdata\numerical\CEC2013_N;..\..\_pdata\numerical\CEC2013_L;..\..\thirdparty\muparserx\include;..\..\thirdparty\muparserx\src\parser;..\..\thirdparty\sortlib\include;..\..\thirdparty\randlib\include;..\..\thirdparty\timelib\include;..\..\thirdparty\doublelib\include;..\..\thirdparty\distancelib\include;..\..\thirdparty\filelib\include;..\..\thirdparty\statslib\include;..\..\thirdparty\stringlib\src\stringlib\stringlib;..\..\thirdparty\metriclib\src\metriclib\metriclib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 /wd4828 %(AdditionalOptions)</AdditionalOptions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <Optimization>MaxSpeed</Optimization>
+      <WarningLevel>Level1</WarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\main.cpp" />
+    <ClCompile Include="..\..\src\basics\ecflow-math.cpp" />
+    <ClCompile Include="..\..\src\basics\ecflow-rand.cpp" />
+    <ClCompile Include="..\..\src\basics\ecflow-sort.cpp" />
+    <ClCompile Include="..\..\src\basics\ecflow-sys.cpp" />
+    <ClCompile Include="..\..\src\basics\ecflow-time.cpp" />
+    <ClCompile Include="..\..\src\problem\variable\variable.cpp" />
+    <ClCompile Include="..\..\src\problem\objective\objective.cpp" />
+    <ClCompile Include="..\..\src\solution\solution.cpp" />
+    <ClCompile Include="..\..\src\solution\solution-decoder.cpp" />
+    <ClCompile Include="..\..\src\calculator\func-calculator.cpp" />
+    <ClCompile Include="..\..\src\calculator\tree-calculator.cpp" />
+    <ClCompile Include="..\..\src\exprTree\ExprTree.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpError.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpFuncCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpFuncCommon.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpFuncMatrix.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpFuncNonCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpFuncStr.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpICallback.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIfThenElse.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIOprt.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIOprtBinShortcut.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIPackage.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIToken.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIValReader.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpIValue.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtBinAssign.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtBinCommon.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtBinShortcut.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtIndex.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtMatrix.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtNonCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpOprtPostfixCommon.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageCommon.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageMatrix.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageNonCmplx.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageStr.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpPackageUnit.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpParser.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpParserBase.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpParserMessageProvider.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpRPN.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpScriptTokens.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpTest.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpTokenReader.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpValReader.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpValue.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpValueCache.cpp" />
+    <ClCompile Include="..\..\thirdparty\muparserx\src\parser\mpVariable.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_N\cec2013.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_N\cfunction.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_N\rand2.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\Benchmarks.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F1.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F10.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F11.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F12.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F13.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F14.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F15.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F2.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F3.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F4.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F5.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F6.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F7.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F8.cpp" />
+    <ClCompile Include="..\..\_pdata\numerical\CEC2013_L\F9.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

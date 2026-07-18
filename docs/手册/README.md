@@ -41,6 +41,6 @@
 | `1.optimizerconfig.cpp` | 单子群优化器配置与运行（ConfigBuilder → buildOptimizer → exe → 取最优） |
 | `2.subpopulation.cpp` | 多段 workflow（交叉段+变异段）+ 子种群层访问 |
 | `3.population-manager.cpp` | 多子群协作（异构子群 PSO+GA、NoInteraction 管理器） |
-| `4.log-analysis.cpp` | 日志两轴（sys_logger + 每优化器结果/过程）+ **ECAnalyzer 分析**（读 `.rslt` → 对比表 → Txt/Csv/LaTeX，v4 迁移） |
+| `4.log-analysis.cpp` | 日志两轴（sys_logger + 每优化器结果/过程）+ **ECAnalyzer 分析**（读 `.rslt` → 对比表 → Txt/Csv/LaTeX） |
 | `5.template.cpp` | 用问题模板端到端（PT_TSP 一键构造 → ACO 跑 → 取最优巡回） |
 | `5.config-generate*.cpp` | 配置表批量生成（已有，见 tutorial 现有三文件） |

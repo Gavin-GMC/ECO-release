@@ -45,4 +45,4 @@ CEC2013_N 的 f3 为 1 维；跑法：`main.exe _pdata/numerical/cec2013n-f3.num
 ## 4. 注
 
 - 数值基准需连续域优化器（CMA-ES / ES 等），不适用 ACO 等排列/构造式算子。
-- CEC 竞赛源码定义了 `INF`/`E`/`PI` 等全局宏；`pt-numerical.h` 在 include 边界已 `#undef` 抑制其外泄（见 未来规划 `CEC-MACRO-POLLUTION`）。
+- CEC 竞赛源码定义了 `INF`/`E`/`PI` 等全局宏；`pt-numerical.h` 在 include 边界已 `#undef` 抑制其外泄。

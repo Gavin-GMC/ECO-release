@@ -1,20 +1,14 @@
-﻿//------------------------Description------------------------
-// 配置结构(最小集,v3.4.c):描述一条 workflow 与一个子种群的装配清单,供 OptimizerBuilder 消费。
-//   顶层 ConfigureList(cooperation/logger/name/g_archive)与配置文件编解码随 v3.5/v3.6 增量长出。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+//------------------------Description------------------------
+// 配置结构:描述一条 workflow 与一个子种群的装配清单,供 OptimizerBuilder 消费。
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
 #include <vector>
 #include "module-type.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 单个组件配置:c_type 决定 Registry + wrapper;tag 行为名;para 变长参数
     struct ComponentConfig
@@ -40,6 +34,7 @@ namespace ECFlow
     };
 
     // 子种群配置
+    //   v1.4.8:**删除 individual_type** —— INDIV-COMPOSE 收官后个体只剩基类 Individual、
     //   行为全由装配期推断并挂载的特性决定,`Registry<Individual>`(按名造子类)亦已移除。
     //   该字段遂成**只写不读的死字段**:传任何字符串(含拼错的)都不影响所造个体,是个会骗人的接口。
     struct SubpopulationConfig
@@ -73,6 +68,7 @@ namespace ECFlow
         bool                             logger_full_result = false;
         bool                             logger_process = false;
         bool                             logger_full_process = false;
+        bool                             logger_swarm = false;          // v2.2.2.3:.prcs 每代 best 之后再打整群(逐代 × 种群规模,体积大)
         bool                             logger_console_echo = false;   // v1.4.9:进度回显到控制台(CLI -v);不落 .cfg,仅运行期
 
         CooperationConfig                cooperation;

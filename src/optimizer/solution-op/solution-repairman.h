@@ -1,22 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 解修复器:把非法解的某一维修复到合法值(边界 / 随机 / 贪心 / 不修)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include "solution.h"
-#include "ecflow-assert.h"
+#include "evoflow-assert.h"
 #include "problem-handle.h"
 #include "parameter-template.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class SolutionRepaireman
     {
@@ -131,9 +126,9 @@ namespace ECFlow
             [](const double*) -> SolutionRepaireman* { return new ModularRepair(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(rep_boundary, SolutionRepaireman, boundaryRepairEntry());
-    ECFLOW_REGISTER(rep_modular,  SolutionRepaireman, modularRepairEntry());
-    ECFLOW_REGISTER(rep_random,   SolutionRepaireman, randomRepairEntry());
-    ECFLOW_REGISTER(rep_greedy,   SolutionRepaireman, greedyRepairEntry());
-    ECFLOW_REGISTER(rep_no,       SolutionRepaireman, noRepairEntry());
+    EVOFLOW_REGISTER(rep_boundary, SolutionRepaireman, boundaryRepairEntry());
+    EVOFLOW_REGISTER(rep_modular,  SolutionRepaireman, modularRepairEntry());
+    EVOFLOW_REGISTER(rep_random,   SolutionRepaireman, randomRepairEntry());
+    EVOFLOW_REGISTER(rep_greedy,   SolutionRepaireman, greedyRepairEntry());
+    EVOFLOW_REGISTER(rep_no,       SolutionRepaireman, noRepairEntry());
 }

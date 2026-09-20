@@ -1,15 +1,7 @@
-﻿//------------------------Description------------------------
-// 组件自注册表:每个组件基类一张 Registry<Base>(分类)+ ECFLOW_REGISTER 自注册宏。
-//   取代原 *-type 枚举 / *-factory / setter 的散点维护:新增组件 = 一个文件 + 一行注册。
-//-------------------------Reference-------------------------
-// 设计与原型见 docs/组件注册表方案.md;原型 registry-prototype/ 的工程化(proto→ECFlow)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+//------------------------Description------------------------
+// 组件自注册表:每个组件基类一张 Registry<Base>(分类)+ EVOFLOW_REGISTER 自注册宏。
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -18,9 +10,9 @@
 #include <cstdio>
 #include "module-type.h"
 #include "parameter-template.h"
-#include "ecflow-assert.h"
+#include "evoflow-assert.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     inline const char* moduleTypeName(ModuleType m)
     {
@@ -51,6 +43,7 @@ namespace ECFlow
             std::string        name;
             ModuleType         category;
             // 参数模板:**自包含**(含渐进披露的 next,见 parameter-template.h)。
+            //   v1.4.6.7:原此处另有 `tail` 字段承载渐进披露,已移入 ParameterTemplate ——
             //   模板自包含后,`tail()` 返回的模板才能带着**它自己的**下一级(多级披露天然成立),
             //   且 Registry 不必再为此转发。
             ParameterTemplate  params;
@@ -116,10 +109,10 @@ namespace ECFlow
         std::map<std::string, Entry> _t;
     };
 
-    #define ECFLOW_CAT_(a, b) a##b
-    #define ECFLOW_CAT(a, b)  ECFLOW_CAT_(a, b)
+    #define EVOFLOW_CAT_(a, b) a##b
+    #define EVOFLOW_CAT(a, b)  EVOFLOW_CAT_(a, b)
     // 自注册宏:inline 变量(C++17)启动前注册;显式 TAG 保证跨 TU 名字稳定(不用 __COUNTER__);
     //   变参接住 Entry 表达式(如 xxxEntry())内部的逗号。
-    #define ECFLOW_REGISTER(TAG, Base, ...) \
-        inline const bool ECFLOW_CAT(_ecflow_reg_, TAG) = ::ECFlow::Registry<Base>::instance().add(__VA_ARGS__)
+    #define EVOFLOW_REGISTER(TAG, Base, ...) \
+        inline const bool EVOFLOW_CAT(_evoflow_reg_, TAG) = ::EvoFlow::Registry<Base>::instance().add(__VA_ARGS__)
 }

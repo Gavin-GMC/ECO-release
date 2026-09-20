@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/solver.h
 //
@@ -10,7 +12,7 @@
 #include "cp/eval/propagate.h"
 #include "cp/eval/violation.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 // 模式 A（增量：首次全量，之后只重传播自上次以来改动过的变量所涉约束）
 inline SolveReport solve(State& st, bool force_full = false) { return propagate(st, force_full); }
@@ -26,4 +28,4 @@ inline const interval_set& constraint_rhs_domain(State& st, std::size_t ci) {
     return st.forward(st.program().node(st.program().constraints()[ci].root).b);
 }
 
-} // namespace ECFlow
+} // namespace EvoFlow

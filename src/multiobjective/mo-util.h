@@ -1,15 +1,11 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 多目标基础工具 MOUtil:非支配排序(fastNonDominatedSort)+ 拥挤度距离(crowdingDistance)。供 NSGA-II 环境选择、
+
 //-------------------------Reference-------------------------
 // K. Deb, A. Pratap, S. Agarwal, T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II,"
 // IEEE Trans. Evolutionary Computation, vol. 6, no. 2, pp. 182-197, 2002, doi: 10.1109/4235.996017.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -17,9 +13,9 @@
 #include <cmath>
 #include <utility>
 #include "individual.h"
-#include "ecflow-constant.h"
+#include "evoflow-constant.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class MOUtil
     {
@@ -62,7 +58,7 @@ namespace ECFlow
             if (ss <= 0) return;
 
             int obj_n = swarm[0]->getObjectNumber();
-            if (ss <= 2) { for (int i = 0; i < ss; i++) distance_back[i] = double(ECFLOW_MAX); return; }  // 全为边界
+            if (ss <= 2) { for (int i = 0; i < ss; i++) distance_back[i] = double(EVOFLOW_MAX); return; }  // 全为边界
 
             std::vector<int> idx(ss);
             for (int o = 0; o < obj_n; o++)
@@ -72,8 +68,8 @@ namespace ECFlow
                           [&swarm, o](int a, int b) { return swarm[a]->solution.fitness[o] < swarm[b]->solution.fitness[o]; });
 
                 double range = swarm[idx[ss - 1]]->solution.fitness[o] - swarm[idx[0]]->solution.fitness[o];
-                distance_back[idx[0]]      += double(ECFLOW_MAX);   // 该目标极小/极大 = 边界,必留
-                distance_back[idx[ss - 1]] += double(ECFLOW_MAX);
+                distance_back[idx[0]]      += double(EVOFLOW_MAX);   // 该目标极小/极大 = 边界,必留
+                distance_back[idx[ss - 1]] += double(EVOFLOW_MAX);
                 if (normalize && range <= 1e-12) continue;         // 该目标全等 → 内部不贡献(避免除零)
 
                 for (int i = 1; i < ss - 1; i++)

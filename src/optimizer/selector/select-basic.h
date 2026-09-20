@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 常用环境选择算子:IndexUpdater(按索引替换)/ RankUpdater(择优合并)/ CloseUpdater(替换最相似)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "selector.h"
-#include "ecflow-math.h"
+#include "evoflow-math.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 按索引替换:对齐下标,逐位替换(范围取两群体较小者)
     class IndexUpdater final : public EnvirSelect
@@ -126,12 +121,18 @@ namespace ECFlow
     inline Registry<EnvirSelect>::Entry indexSelectorEntry()
     {
         // 参数 = 自身 `{accept_type}` ++ **接受准则的参数**(经 tail → acceptParaTemplate,与 postAssert 的追加式对仗)。
+        //   v1.4.6.4 前把 T0/decay 拍平硬编在此 → 语义上把选择器绑死到退火接受,与"选择器 ⊥ 接受准则"的设计相悖。
         return { "Index", ModuleType::T_selector,
             ParameterTemplate{ { {"accept_type", ParamKind::Enum, 0, 3, false, 0, 1} },   // 0 无条件/1 择优/2 退火/3 年龄计龄
                                acceptParaTemplate },                                       // next:追加接受准则自己的参数
             sizeof(IndexUpdater),
             [](const double* p) -> EnvirSelect* { return new IndexUpdater(makeAccept(p)); },
-            [](AssertList&, const double*) {}, [](AssertList& L, const double* p) { acceptPostAssert(p, L); } };   // 追加接受准则契约
+            [](AssertList&, const double*) {}, [](AssertList& L, const double* p) {
+                acceptPostAssert(p, L);
+                // 只有无条件 Index 能保证 population[i]=新解、offspring[i]=同索引旧解。
+                if (!p || (int)p[0] == (int)AcceptType::Unconditional)
+                    L.add(new Assert(ModuleType::T_selector, "unconditionalIndexReplacement", 1, MatchType::postAssert));
+            } };   // 追加接受准则契约
     }
     inline Registry<EnvirSelect>::Entry rankSelectorEntry()
     {
@@ -148,7 +149,7 @@ namespace ECFlow
             [](const double* p) -> EnvirSelect* { return new CloseUpdater(makeAccept(p)); },
             [](AssertList&, const double*) {}, [](AssertList& L, const double* p) { acceptPostAssert(p, L); } };   // 追加接受准则契约
     }
-    ECFLOW_REGISTER(sel_index, EnvirSelect, indexSelectorEntry());
-    ECFLOW_REGISTER(sel_rank,  EnvirSelect, rankSelectorEntry());
-    ECFLOW_REGISTER(sel_close, EnvirSelect, closeSelectorEntry());
+    EVOFLOW_REGISTER(sel_index, EnvirSelect, indexSelectorEntry());
+    EVOFLOW_REGISTER(sel_rank,  EnvirSelect, rankSelectorEntry());
+    EVOFLOW_REGISTER(sel_close, EnvirSelect, closeSelectorEntry());
 }

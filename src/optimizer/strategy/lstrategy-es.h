@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 进化策略(ES)学习策略:各向同性高斯扰动 + 全局步长自适应。分布型策略(类 EDA),连续优化。
 //   本文件收 ES 各步长自适应变体。
-//-------------------------Reference-------------------------
-// 新增算子(非迁移)。1/5 规则:Rechenberg 1973。落位参照 lstrategy-eda.h(分布型整群策略)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <vector>
-#include "ecflow-constant.h"
+#include "evoflow-constant.h"
 #include "solution.h"
 #include "individual.h"
 #include "individual-array.h"
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // ES:1/5 成功规则(Rechenberg)——成功率 > 1/5 增大 σ(探索)、< 1/5 减小 σ(精细)。全局单一 σ。
     class GaussianOneFifth : public LearningStrategy
@@ -90,7 +86,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { GaussianOneFifth::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { GaussianOneFifth::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_es_onefifth, LearningStrategy, gaussianOneFifthEntry());
+    EVOFLOW_REGISTER(lstrat_es_onefifth, LearningStrategy, gaussianOneFifthEntry());
 
     // ES:self-adaptive σ——每维步长随个体遗传+变异+选择(σ 存 StepIndividual)。整体生成(getNewIndividual):
     //   σ'_d = σ_d·exp(τ'·N0 + τ·N_d)(log-normal,N0 全维共享);x'_d = x_d + σ'_d·N_d。学习率 τ'=1/√(2n)、τ=1/√(2√n)。
@@ -148,5 +144,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { GaussianSelfAdapt::preAssert(L, const_cast<double*>(p)); },
             [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_es_selfadapt, LearningStrategy, gaussianSelfAdaptEntry());
+    EVOFLOW_REGISTER(lstrat_es_selfadapt, LearningStrategy, gaussianSelfAdaptEntry());
 }

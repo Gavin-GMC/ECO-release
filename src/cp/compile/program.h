@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/compile/program.h
 //
@@ -18,7 +20,7 @@
 #include <stdexcept>
 #include <algorithm>
 
-namespace ECFlow {
+namespace EvoFlow {
 
 using NodeId = std::int32_t;
 constexpr NodeId kNoNode = -1;
@@ -204,4 +206,4 @@ private:
     }
 };
 
-} // namespace ECFlow
+} // namespace EvoFlow

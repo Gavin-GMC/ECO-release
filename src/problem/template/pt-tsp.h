@@ -1,13 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 旅行商 (Travelling Salesman Problem) 问题模板。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include"problem.h"
 #include<fstream>
 #include<sstream>
@@ -16,15 +13,12 @@
 #include"logger.hpp"
 #include"pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 
-namespace ECFlow
+namespace EvoFlow
 {
 	// template of Travelling Salesman Problem
-	class PT_TSP
+	class PT_TSP : public ProblemTemplate
 	{
-	public:
-		enum class DistanceType { Eula, Manhattan, Chebyshec};
-		enum class RoundType { None, Ceil, Floor, Round };
-
+		// DistanceType/RoundType 已上移至 evoflow-math.h(全库唯一,T-DIST-UNIFY);本类直接引用 EvoFlow::DistanceType/RoundType。
 	private:
 		std::string _name;
 
@@ -124,7 +118,7 @@ namespace ECFlow
 
 				double dist = distance[curr * cityn + next];
 				if (dist == 0)
-					return ECFLOW_MAX;
+					return EVOFLOW_MAX;
 
 				return 1 / dist;
 			}
@@ -144,32 +138,16 @@ namespace ECFlow
 			int table_size = _city_number * _city_number;
 			_distance = new double[table_size + 1];
 
-			switch (_dtype)
+			// 统一经 metricDistance 分派(Euclidean/Manhattan/Chebyshev/Geo);对角=MAX(TSP 不可停自身)。
+			// 顺带补齐原缺失的 Chebyshev/Geo 支(旧 switch 仅 Eula/Manhattan,MAX_2D/GEO 落 default→距离全 0 的潜伏 bug)。
+			for (int i = 0; i < _city_number; i++)
 			{
-			case DistanceType::Eula:
-				for (int i = 0; i < _city_number; i++)
+				for (int j = 0; j < i; j++)
 				{
-					for (int j = 0; j < i; j++)
-					{
-						_distance[i * _city_number + j] = eu_distance(_position + i * _dimension, _position + j * _dimension, _dimension);
-						_distance[j * _city_number + i] = _distance[i * _city_number + j];
-					}
-					_distance[i * _city_number + i] = ECFLOW_MAX;
+					_distance[i * _city_number + j] = metricDistance(_dtype, _position + i * _dimension, _position + j * _dimension, _dimension);
+					_distance[j * _city_number + i] = _distance[i * _city_number + j];
 				}
-				break;
-			case DistanceType::Manhattan:
-				for (int i = 0; i < _city_number; i++)
-				{
-					for (int j = 0; j < i; j++)
-					{
-						_distance[i * _city_number + j] = man_distance(_position + i * _dimension, _position + j * _dimension, _dimension);
-						_distance[j * _city_number + i] = _distance[i * _city_number + j];
-					}
-					_distance[i * _city_number + i] = ECFLOW_MAX;
-				}
-				break;
-			default:
-				break;
+				_distance[i * _city_number + i] = EVOFLOW_MAX;
 			}
 
 			switch (_rtype)
@@ -208,7 +186,7 @@ namespace ECFlow
 			_dimension = 0;
 			_position = nullptr;
 			_distance = nullptr;
-			_dtype = DistanceType::Eula;
+			_dtype = DistanceType::Euclidean;
 			_rtype = RoundType::None;
 			_evaluate = nullptr;
 			_heuristic = nullptr;
@@ -225,7 +203,7 @@ namespace ECFlow
 			delete _heuristic;
 		}
 
-		void setName(std::string name)
+		void setName(std::string name) override
 		{
 			_name = name;
 		}
@@ -266,7 +244,7 @@ namespace ECFlow
 			return _city_number;
 		}
 
-		Problem* getProblem()
+		Problem* getProblem() override
 		{
 			if (_city_number == 0)
 				return nullptr;
@@ -276,9 +254,9 @@ namespace ECFlow
 
 			// 添加变量
 			if (_symmetrical)
-				back->addVariable("x", 0, _city_number - 1, 1, _city_number, 1, ECFlow::VariableType::sequence_bidiagraph); // 对称图
+				back->addVariable("x", 0, _city_number - 1, 1, _city_number, 1, EvoFlow::VariableType::sequence_bidiagraph); // 对称图
 			else
-				back->addVariable("x", 0, _city_number - 1, 1, _city_number, 1, ECFlow::VariableType::sequence_direction); // 有向图
+				back->addVariable("x", 0, _city_number - 1, 1, _city_number, 1, EvoFlow::VariableType::sequence_direction); // 有向图
 			
 			// 距离矩阵生成
 			if(!_setted_distance)
@@ -296,13 +274,14 @@ namespace ECFlow
 			
 			// 添加约束
 			back->addConstrainUnique("x", 1e6, "length"); // 每个城市限定访问一次
-			back->addConstrainRange("x", ECFlow::EMPTYVALUE, ECFlow::EMPTYVALUE, 1e6, "length"); // 只能访问区域内的城市
+			back->addConstrainRange("x", EvoFlow::EMPTYVALUE, EvoFlow::EMPTYVALUE, 1e6, "length"); // 只能访问区域内的城市
 
 			return back;
 		}
 
+		// v1.4.9(T-SAVE):回写 TSPLIB 子集 _pdata/tsp/<name>.tsp。有坐标则写 NODE_COORD_SECTION(EUC_2D),
 		//   否则写显式距离矩阵(EDGE_WEIGHT_TYPE EXPLICIT / FORMAT FULL_MATRIX)。overwrite=false 时不覆盖已存在文件。
-		void save(bool overwrite = false)
+		void save(bool overwrite = false) override
 		{
 			std::string path = "_pdata/tsp/" + _name + ".tsp";
 			if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("TSP save: file exists (use overwrite): " + path); return; } }
@@ -311,7 +290,11 @@ namespace ECFlow
 			out << "NAME: " << _name << "\nTYPE: TSP\nDIMENSION: " << _city_number << "\n";
 			if (_position != nullptr && _dimension >= 2 && !_setted_distance)
 			{
-				out << "EDGE_WEIGHT_TYPE: EUC_2D\nNODE_COORD_SECTION\n";
+				const char* ewt = "EUC_2D";                                    // Euclidean+Round(默认)
+				if      (_dtype == DistanceType::Geo)       ewt = "GEO";
+				else if (_dtype == DistanceType::Manhattan) ewt = "MAN_2D";
+				else if (_rtype == RoundType::Ceil)         ewt = "CEIL_2D";
+				out << "EDGE_WEIGHT_TYPE: " << ewt << "\nNODE_COORD_SECTION\n";
 				for (int i = 0; i < _city_number; ++i)
 					out << (i + 1) << " " << _position[i * _dimension] << " " << _position[i * _dimension + 1] << "\n";
 			}
@@ -327,7 +310,7 @@ namespace ECFlow
 			out << "EOF\n";
 		}
 
-		void load(std::string name)
+		void load(std::string name) override
 		{
 			int city_number = 0;
 			int demension = 0;
@@ -335,6 +318,7 @@ namespace ECFlow
 			bool set_edge = false;
 			bool symytric = true;
 
+			// v1.4.9:自适应路径 —— name 为短名则拼 _pdata/tsp/<name>.tsp,为路径则原样打开;问题名取干净短名。
 			std::string path = resolveInstancePath(name, "tsp", "tsp");
 			setName(instanceName(name));
 
@@ -521,7 +505,7 @@ namespace ECFlow
 
 						for (int i = 0; i < city_number; i++)
 						{
-							city_map[i * city_number + i] = ECFlow::EMPTYVALUE;
+							city_map[i * city_number + i] = EvoFlow::EMPTYVALUE;
 						}
 
 						setMap(city_map, city_number, symytric);
@@ -534,42 +518,42 @@ namespace ECFlow
 						if (s_buffer == "EUC_2D" || s_buffer == "ATT")
 						{
 							demension = 2;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Eula, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Euclidean, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "EUC_3D")
 						{
 							demension = 3;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Eula, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Euclidean, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "MAX_2D")
 						{
 							demension = 2;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Chebyshec, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Chebyshev, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "MAX_3D")
 						{
 							demension = 3;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Chebyshec, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Chebyshev, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "MAN_2D")
 						{
 							demension = 2;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Manhattan, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Manhattan, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "MAN_3D")
 						{
 							demension = 3;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Manhattan, ECFlow::PT_TSP::RoundType::Round);
+							setEdgeWeightType(EvoFlow::DistanceType::Manhattan, EvoFlow::RoundType::Round);
 						}
 						else if (s_buffer == "CEIL_2D")
 						{
 							demension = 2;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Eula, ECFlow::PT_TSP::RoundType::Ceil);
+							setEdgeWeightType(EvoFlow::DistanceType::Euclidean, EvoFlow::RoundType::Ceil);
 						}
 						else if (s_buffer == "GEO")
 						{
 							demension = 2;
-							setEdgeWeightType(ECFlow::PT_TSP::DistanceType::Eula, ECFlow::PT_TSP::RoundType::None);
+							setEdgeWeightType(EvoFlow::DistanceType::Geo, EvoFlow::RoundType::None);   // T-DIST-TYPE:真大圆(替旧"误当欧氏")
 						}
 						else
 						{
@@ -624,7 +608,7 @@ namespace ECFlow
 			}
 		}
 
-		void clear()
+		void clear() override
 		{
 			_name = "tsp_default";
 			_city_number = 0;
@@ -639,8 +623,12 @@ namespace ECFlow
 			delete _heuristic;
 			_heuristic = nullptr;
 
-			_dtype = DistanceType::Eula;
+			_dtype = DistanceType::Euclidean;
 			_rtype = RoundType::None;
 		}
 	};
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(tsp, "TSP", EvoFlow::PT_TSP);
+EVOFLOW_REGISTER_PROBLEM(atsp, "ATSP", EvoFlow::PT_TSP);

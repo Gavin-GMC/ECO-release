@@ -1,27 +1,22 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 变异算子:通过以特定方式改变当前个体的片段来开发邻域。基类 Mutation + 8 种具体变异。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <cstring>
 #include <algorithm>
 #include <vector>
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "solution.h"
 #include "individual.h"
 #include "problem-handle.h"
 #include "learning-strategy.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 变异族基类:仅持速率。**该速率的语义由派生族界定**(见下两族),不在此假定。
     class Mutation : public LearningStrategy
@@ -34,7 +29,7 @@ namespace ECFlow
         virtual ~Mutation() {}
     };
 
-    // ============================ 逐维变异族============================
+    // ============================ 逐维变异族(v1.4.6.6 恢复分层)============================
     // **门控在基类、不在算子里** —— 子类只答"这一维**变成什么**"(mutatedValue),
     //   "这一维**变不变**"由本类统一裁决。本族的 `_mutation_rate` = **逐维选中概率**。
     //
@@ -117,8 +112,8 @@ namespace ECFlow
             int s_size = solution->getSolutionSize();
             for (int i = 0; i < _times; i++)
             {
-                oid1 = ECFlow::get_int(0, s_size - 1);
-                oid2 = ECFlow::get_int(0, s_size - 1);
+                oid1 = EvoFlow::get_int(0, s_size - 1);
+                oid2 = EvoFlow::get_int(0, s_size - 1);
                 if (oid1 > oid2)
                     std::swap(oid1, oid2);
                 while (oid1 < oid2)
@@ -149,8 +144,8 @@ namespace ECFlow
             int s_size = solution->getSolutionSize();
             for (int i = 0; i < _times; i++)
             {
-                eid1 = ECFlow::get_int(0, s_size - 1);
-                eid2 = ECFlow::get_int(0, s_size - 1);
+                eid1 = EvoFlow::get_int(0, s_size - 1);
+                eid2 = EvoFlow::get_int(0, s_size - 1);
                 std::swap(solution->result[eid1], solution->result[eid2]);
             }
         }
@@ -165,6 +160,7 @@ namespace ECFlow
         double _sigma;
 
     protected:
+        // v1.4.6.6:由 nextDecision 改为 mutatedValue —— 逐维门控收归 PerDimMutation 基类。
         //   原实现无条件施加(mutation_rate 是死参数);现"选中才调本函数",与稳定版及 NSGA-II 原文的
         //   "逐维以 pm 概率施加多项式变异"一致。
         double mutatedValue(const int decision_d, Individual* individual, ProblemHandle* problem_handle, Individual* child) override
@@ -206,11 +202,12 @@ namespace ECFlow
         double guassion()
         {
             return _sigma * (
-                sqrt((-2) * log(ECFlow::rand01()))
-                * sin(2 * 3.1415926 * ECFlow::rand01()));
+                sqrt((-2) * log(EvoFlow::rand01()))
+                * sin(2 * 3.1415926 * EvoFlow::rand01()));
         }
 
     protected:
+        // v1.4.6.6:由 nextDecision 改为 mutatedValue —— 逐维门控收归 PerDimMutation 基类。
         //   原实现无条件加噪(mutation_rate 是死参数,手册曾注"当前实现忽略,逐维必扰");现"选中才加噪"。
         double mutatedValue(const int decision_d, Individual* individual, ProblemHandle*, Individual*) override
         {
@@ -246,8 +243,8 @@ namespace ECFlow
             int s_size = solution->getSolutionSize();
             for (int i = 0; i < _times; i++)
             {
-                oid1 = ECFlow::get_int(0, s_size - 1);
-                oid2 = ECFlow::get_int(0, s_size - 1);
+                oid1 = EvoFlow::get_int(0, s_size - 1);
+                oid2 = EvoFlow::get_int(0, s_size - 1);
 
                 double buffer = (*solution)[oid1];
 
@@ -287,15 +284,15 @@ namespace ECFlow
             int s_size = solution->getSolutionSize();
             for (int i = 0; i < _times; i++)
             {
-                oid1 = ECFlow::get_int(0, s_size - 1);
-                oid2 = ECFlow::get_int(0, s_size - 1);
+                oid1 = EvoFlow::get_int(0, s_size - 1);
+                oid2 = EvoFlow::get_int(0, s_size - 1);
 
                 if (oid2 < oid1)
                     std::swap(oid1, oid2);
 
                 oid2++; // 打乱时索引小于该值
 
-                ECFlow::shuffle(solution->result + oid1, oid2 - oid1);   // 修复:原 std::random_device → ECFlow 引擎(可复现)
+                EvoFlow::shuffle(solution->result + oid1, oid2 - oid1);   // 修复:原 std::random_device → EvoFlow 引擎(可复现)
             }
         }
     };
@@ -340,9 +337,9 @@ namespace ECFlow
                 // 三断点:段 a=[0..i] b=[i+1..j] c=[j+1..k] d=[k+1..s_size-1](b、c 非空)。
                 // **i 下界取 -1(非 0)**:允许段 a 空 → 段 c 可提到最前;i=-1 且 k=s_size-1 即"整段分两段交换"。
                 //   否则 result[0] 恒留最前,邻域不对称(只能把段搬到后/中,搬不到最前);d 空(k=s_size-1)已覆盖"搬到最后"。
-                int i = ECFlow::get_int(-1, s_size - 3);
-                int j = ECFlow::get_int(i + 1, s_size - 2);
-                int k = ECFlow::get_int(j + 1, s_size - 1);
+                int i = EvoFlow::get_int(-1, s_size - 3);
+                int j = EvoFlow::get_int(i + 1, s_size - 2);
+                int k = EvoFlow::get_int(j + 1, s_size - 1);
                 relocate(solution->result, i, j, k);   // 纯段平移(c、b 换位,不反转;i=-1 时拷回区间为 [0..k])
             }
         }
@@ -435,8 +432,8 @@ namespace ECFlow
             if (n < 2) return;
 
             // 随机选两维,取其值 a、b
-            double a = solution->result[ECFlow::get_int(0, n - 1)];
-            double b = solution->result[ECFlow::get_int(0, n - 1)];
+            double a = solution->result[EvoFlow::get_int(0, n - 1)];
+            double b = solution->result[EvoFlow::get_int(0, n - 1)];
             if (a == b) return;   // 同值 → 无可交换(按规格:不重挑)
 
             // 先收集两个值类的下标(必须先收集完再改写,否则改写会污染后续判定)
@@ -464,7 +461,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new SetExchange(p[0]) : new SetExchange(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_setexchange, LearningStrategy, setExchangeEntry());
+    EVOFLOW_REGISTER(lstrat_setexchange, LearningStrategy, setExchangeEntry());
 
     // 值类外迁:随机选一维、记其取值为 a(迁出类);收集**全解中取值=a 的所有维**(集合 A),对 A 随机取一个子集
     //   (逐元素以 subset_rate 独立入选),**整体置为一个新抽取的值 c**(经句柄 getRandomChoiceInspace);c==a 则无迁移。
@@ -496,7 +493,7 @@ namespace ECFlow
             if (n <= 0) return;
 
             // 随机选一维,取其值 a = 迁出类
-            double a = solution->result[ECFlow::get_int(0, n - 1)];
+            double a = solution->result[EvoFlow::get_int(0, n - 1)];
 
             // 先收集迁出类的下标,再取子集
             std::vector<int> setA;
@@ -522,7 +519,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new ClassRelocate(p[0]) : new ClassRelocate(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_classrelocate, LearningStrategy, classRelocateEntry());
+    EVOFLOW_REGISTER(lstrat_classrelocate, LearningStrategy, classRelocateEntry());
 
     // 块互换:四断点把序列分 前|A|M|B|后,**A 与 B 互换**(中段 M 内容与次序不动,仅随 |B|-|A| 平移)。
     //   A、B **长度可不等、且可相隔任意距离**(M 可空)。值多重集守恒 → 排列编码天然保持可行。
@@ -568,10 +565,10 @@ namespace ECFlow
             for (int t = 0; t < _times; t++)
             {
                 // 四断点:A=[i1..j1]、B=[i2..j2],保证 i1<=j1 < i2<=j2(两块非空、不重叠;M=[j1+1..i2-1] 可空)
-                int i1 = ECFlow::get_int(0, s_size - 2);
-                int j1 = ECFlow::get_int(i1, s_size - 2);        // 至少给 B 留 1 维
-                int i2 = ECFlow::get_int(j1 + 1, s_size - 1);
-                int j2 = ECFlow::get_int(i2, s_size - 1);
+                int i1 = EvoFlow::get_int(0, s_size - 2);
+                int j1 = EvoFlow::get_int(i1, s_size - 2);        // 至少给 B 留 1 维
+                int i2 = EvoFlow::get_int(j1 + 1, s_size - 1);
+                int j2 = EvoFlow::get_int(i2, s_size - 1);
                 blockswap(solution->result, i1, j1, i2, j2);
             }
         }
@@ -585,7 +582,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new BlockSwap((int)p[0], p[1]) : new BlockSwap(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_blockswap, LearningStrategy, blockSwapEntry());
+    EVOFLOW_REGISTER(lstrat_blockswap, LearningStrategy, blockSwapEntry());
 
     // 值类合并:随机选两维、记其取值为 a、b(a==b 则无可合并);把**全解中取值=a 的所有维**整体置为 b
     //   → 类 a 彻底消失、并入类 b。**在用的不同值个数恰好减 1**(整合/关停语义:合并两台机器的负载、装箱合并)。
@@ -615,8 +612,8 @@ namespace ECFlow
             if (n < 2) return;
 
             // 两维现值:a = 被合并掉的类、b = 承接类(取自现值 → **必被占用**,这是"确定减一"的来源)
-            double a = solution->result[ECFlow::get_int(0, n - 1)];
-            double b = solution->result[ECFlow::get_int(0, n - 1)];
+            double a = solution->result[EvoFlow::get_int(0, n - 1)];
+            double b = solution->result[EvoFlow::get_int(0, n - 1)];
             if (a == b) return;   // 同值 → 无可合并(按规格:不重挑)
 
             for (int d = 0; d < n; d++) if (solution->result[d] == a) solution->result[d] = b;
@@ -630,7 +627,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new ClassMerge(p[0]) : new ClassMerge(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_classmerge, LearningStrategy, classMergeEntry());
+    EVOFLOW_REGISTER(lstrat_classmerge, LearningStrategy, classMergeEntry());
 
     // 循环交换(多交换的随机版):随机选 k 个**互异**维,把它们的值做**环状轮转**——
     //   `x[d0]←x[d1], x[d1]←x[d2], …, x[d(k−1)]←x[d0]`。
@@ -667,7 +664,7 @@ namespace ECFlow
             picked.reserve(k);
             while ((int)picked.size() < k)
             {
-                int d = ECFlow::get_int(0, n - 1);
+                int d = EvoFlow::get_int(0, n - 1);
                 bool dup = false;
                 for (int q : picked) if (q == d) { dup = true; break; }
                 if (!dup) picked.push_back(d);
@@ -688,7 +685,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new CyclicExchange(int(p[0]), p[1]) : new CyclicExchange(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_cyclicexchange, LearningStrategy, cyclicExchangeEntry());
+    EVOFLOW_REGISTER(lstrat_cyclicexchange, LearningStrategy, cyclicExchangeEntry());
 
     inline Registry<LearningStrategy>::Entry multiPointSameValueEntry()
     {
@@ -697,7 +694,7 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new MultiPointSameValue(p[0]) : new MultiPointSameValue(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_multipointsamevalue, LearningStrategy, multiPointSameValueEntry());
+    EVOFLOW_REGISTER(lstrat_multipointsamevalue, LearningStrategy, multiPointSameValueEntry());
 
     inline Registry<LearningStrategy>::Entry exchangeMutationEntry()
     {
@@ -742,13 +739,13 @@ namespace ECFlow
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
 
-    ECFLOW_REGISTER(lstrat_mut_bit,      LearningStrategy, bitMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_bitflip,  LearningStrategy, bitFlipMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_overturn, LearningStrategy, overturnMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_exchange, LearningStrategy, exchangeMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_pm,       LearningStrategy, pmMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_gauss,    LearningStrategy, gaussMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_insert,   LearningStrategy, insertMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_reorder,  LearningStrategy, reorderMutationEntry());
-    ECFLOW_REGISTER(lstrat_mut_segrelocate, LearningStrategy, segmentRelocateEntry());
+    EVOFLOW_REGISTER(lstrat_mut_bit,      LearningStrategy, bitMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_bitflip,  LearningStrategy, bitFlipMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_overturn, LearningStrategy, overturnMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_exchange, LearningStrategy, exchangeMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_pm,       LearningStrategy, pmMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_gauss,    LearningStrategy, gaussMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_insert,   LearningStrategy, insertMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_reorder,  LearningStrategy, reorderMutationEntry());
+    EVOFLOW_REGISTER(lstrat_mut_segrelocate, LearningStrategy, segmentRelocateEntry());
 }

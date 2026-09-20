@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 烟花算法环境选择 DistanceSelect:候选池(烟花+全部火花)中保留最优 1 个,其余 n-1 个按**距离密度**概率选。
 //   距离越大(越孤立)选中概率越高 → 保多样性(避免收敛到同一簇),是 FWA 原文选择策略。
+
 //-------------------------Reference-------------------------
 // Y. Tan, Y. Zhu, "Fireworks Algorithm for Optimization," ICSI 2010, LNCS 6145, pp. 355-364.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include "selector.h"
 #include "individual-array.h"
-#include "ecflow-math.h"
-#include "ecflow-rand.h"
+#include "evoflow-math.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class DistanceSelect final : public EnvirSelect
     {
@@ -89,5 +85,5 @@ namespace ECFlow
             [](const double*) -> EnvirSelect* { return new DistanceSelect(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(sel_distanceselect, EnvirSelect, distanceSelectEntry());
+    EVOFLOW_REGISTER(sel_distanceselect, EnvirSelect, distanceSelectEntry());
 }

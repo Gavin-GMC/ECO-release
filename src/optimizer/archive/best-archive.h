@@ -1,24 +1,19 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 最优档案 BestArchive:记录优化器/种群运行过程中的最优(或可接受)解。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include "ecflow-constant.h"
-#include "ecflow-rand.h"
-#include "ecflow-math.h"
+#include "evoflow-constant.h"
+#include "evoflow-rand.h"
+#include "evoflow-math.h"
 #include "solution.h"
 #include "comparer.hpp"
 #include "problem-handle.h"
 #include "module-type.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class BestArchive
     {
@@ -120,7 +115,7 @@ namespace ECFlow
 
         ~HistoricArchive() { delete[] _best_solution; }
 
-        Solution* getElite() { return _best_solution + ECFlow::get_int(0, _best_size - 1); }
+        Solution* getElite() { return _best_solution + EvoFlow::get_int(0, _best_size - 1); }
 
         bool updateBest(const Solution& new_best)
         {
@@ -166,7 +161,7 @@ namespace ECFlow
 
         ~MultiobjectArchive() { delete[] _best_solution; }
 
-        Solution* getElite() { return _best_solution + ECFlow::get_int(0, _best_size - 1); }
+        Solution* getElite() { return _best_solution + EvoFlow::get_int(0, _best_size - 1); }
 
         bool updateBest(const Solution& new_best)
         {
@@ -227,7 +222,7 @@ namespace ECFlow
 
         ~MultimodalArchive() { delete[] _best_solution; }
 
-        Solution* getElite() { return _best_solution + ECFlow::get_int(0, _best_size - 1); }
+        Solution* getElite() { return _best_solution + EvoFlow::get_int(0, _best_size - 1); }
 
         bool updateBest(const Solution& new_best)
         {
@@ -285,7 +280,7 @@ namespace ECFlow
             [](const double*) -> BestArchive* { return new MultimodalArchive(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(arch_basic,       BestArchive, basicArchiveEntry());
-    ECFLOW_REGISTER(arch_multiobject, BestArchive, multiobjectArchiveEntry());
-    ECFLOW_REGISTER(arch_multimodal,  BestArchive, multimodalArchiveEntry());
+    EVOFLOW_REGISTER(arch_basic,       BestArchive, basicArchiveEntry());
+    EVOFLOW_REGISTER(arch_multiobject, BestArchive, multiobjectArchiveEntry());
+    EVOFLOW_REGISTER(arch_multimodal,  BestArchive, multimodalArchiveEntry());
 }

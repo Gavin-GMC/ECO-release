@@ -1,22 +1,15 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 常用子种群邻域拓扑(5 种)→ Registry<SubpopulationTopology>:
 //   Connected(全连接,除己外皆邻)/ Star(星形,0 号为中心)/ Toroidal(环形,前后各一)/
 //   Preswarm(前序,i 邻接所有 j<i)/ NoConnect(孤立,无邻)。
-//-------------------------Reference-------------------------
-//   原工厂仅启用此 5 种;Given/Cell/Random 原即注释(WIP,Given 构造有悬空指针 bug)→ 跳过,记未来项 STOPO-MORE。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "subpopulation-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 全连接:每子群邻接除自身外的全部
     class ConnectedTopology : public SubpopulationTopology
@@ -178,9 +171,9 @@ namespace ECFlow
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
 
-    ECFLOW_REGISTER(stopo_connected, SubpopulationTopology, connectedTopologyEntry());
-    ECFLOW_REGISTER(stopo_star,      SubpopulationTopology, starTopologyEntry());
-    ECFLOW_REGISTER(stopo_toroidal,  SubpopulationTopology, toroidalTopologyEntry());
-    ECFLOW_REGISTER(stopo_preswarm,  SubpopulationTopology, preswarmTopologyEntry());
-    ECFLOW_REGISTER(stopo_noconnect, SubpopulationTopology, noConnectTopologyEntry());
+    EVOFLOW_REGISTER(stopo_connected, SubpopulationTopology, connectedTopologyEntry());
+    EVOFLOW_REGISTER(stopo_star,      SubpopulationTopology, starTopologyEntry());
+    EVOFLOW_REGISTER(stopo_toroidal,  SubpopulationTopology, toroidalTopologyEntry());
+    EVOFLOW_REGISTER(stopo_preswarm,  SubpopulationTopology, preswarmTopologyEntry());
+    EVOFLOW_REGISTER(stopo_noconnect, SubpopulationTopology, noConnectTopologyEntry());
 }

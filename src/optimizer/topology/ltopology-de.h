@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 随机学习拓扑 RandomLearning:每个个体从种群中随机挑选 number 个"互不重复"的个体作为学习对象。
 //   (差分进化等使用此拓扑;故原文件名 de,但行为=随机学习,tag 用行为名。)
+
 //-------------------------Reference-------------------------
 // [1] R. Storn and K. Price, "Differential Evolution — A Simple and Efficient Heuristic for Global
 //     Optimization over Continuous Spaces," Journal of Global Optimization, vol. 11, no. 4, pp. 341-359,
 //     1997, doi: 10.1023/A:1008202821328.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include "ecflow-constant.h"
-#include "ecflow-rand.h"
+#include "evoflow-constant.h"
+#include "evoflow-rand.h"
 #include "learning-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class RandomLearning : public LearningTopology
     {
@@ -77,10 +73,10 @@ namespace ECFlow
                 // 选取学习对象（需要不重复）
                 for (int i = 1; i <= _number; i++)
                 {
-                    indexs[i] = ECFlow::get_int(0, graph_size - 1);
+                    indexs[i] = EvoFlow::get_int(0, graph_size - 1);
                     while (isRepeat(i))
                     {
-                        indexs[i] = ECFlow::get_int(0, graph_size - 1);
+                        indexs[i] = EvoFlow::get_int(0, graph_size - 1);
                     }
 
                     s2 = &cswarm[0][indexs[i]].solution;
@@ -102,5 +98,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { RandomLearning::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { RandomLearning::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_randomlearning, LearningTopology, randomLearningTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_randomlearning, LearningTopology, randomLearningTopologyEntry());
 }

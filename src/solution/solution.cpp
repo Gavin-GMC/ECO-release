@@ -1,9 +1,11 @@
-﻿#include <stdexcept>
-#include <utility>
-#include "Solution.h"
-#include "ecflow-basicfunc.h"
+// SPDX-License-Identifier: BSD-3-Clause
 
-using namespace ECFlow;
+#include <stdexcept>
+#include <utility>
+#include "solution.h"
+#include "evoflow-basicfunc.h"
+
+using namespace EvoFlow;
 
  // 默认构造函数实现
 Solution::Solution()

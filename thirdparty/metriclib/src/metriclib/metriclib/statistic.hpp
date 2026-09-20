@@ -30,7 +30,7 @@ namespace MetricLib
      * @return 数组的算术均值（double类型）
      * @throw std::invalid_argument 如果data为空指针或length<=0
      */
-    double mean(const double* data, const int length) {
+    inline double mean(const double* data, const int length) {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("mean(): data is nullptr or length <= 0");
         }
@@ -50,7 +50,7 @@ namespace MetricLib
      * @throw std::invalid_argument 如果data为空指针或length<=0
      * @note 样本方差需除以(length-1)，如需样本方差可修改此函数或新增接口
      */
-    double variance(const double* data, const int length) {
+    inline double variance(const double* data, const int length) {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("variance(): data is nullptr or length <= 0");
         }
@@ -71,7 +71,7 @@ namespace MetricLib
      * @return 数组的总体标准差（double类型）
      * @throw std::invalid_argument 如果data为空指针或length<=0
      */
-    double standardDeviation(const double* data, const int length) {
+    inline double standardDeviation(const double* data, const int length) {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("standardDeviation(): data is nullptr or length <= 0");
         }
@@ -87,7 +87,7 @@ namespace MetricLib
      * @throw std::invalid_argument 如果data为空指针或length<=0
      * @note 函数内部会创建数组副本并排序，不修改原数组
      */
-    double median(const double* data, const int length) {
+    inline double median(const double* data, const int length) {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("median(): data is nullptr or length <= 0");
         }
@@ -110,7 +110,7 @@ namespace MetricLib
      * @return 数组的众数（double类型）；若多个数值频率相同，返回第一个出现的众数
      * @throw std::invalid_argument 如果data为空指针或length<=0
      */
-    double mode(const double* data, const int length) {
+    inline double mode(const double* data, const int length) {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("mode(): data is nullptr or length <= 0");
         }
@@ -154,7 +154,7 @@ namespace MetricLib
      * @return 数组的最大值（double类型）
      * @throw std::invalid_argument 如果input为空指针或size<=0
      */
-    double largest(const double* input, const int size)
+    inline double largest(const double* input, const int size)
     {
         if (input == nullptr || size <= 0) {
             throw std::invalid_argument("largest(): input is nullptr or size <= 0");
@@ -177,7 +177,7 @@ namespace MetricLib
      * @return 数组的最小值（double类型）
      * @throw std::invalid_argument 如果input为空指针或size<=0
      */
-    double smallest(const double* input, const int size)
+    inline double smallest(const double* input, const int size)
     {
         if (input == nullptr || size <= 0) {
             throw std::invalid_argument("smallest(): input is nullptr or size <= 0");
@@ -200,7 +200,7 @@ namespace MetricLib
      * @return 数组的极差（double类型），长度为1时极差为0
      * @throw std::invalid_argument 如果data为空指针或length<=0
      */
-    double range(const double* data, const int length)
+    inline double range(const double* data, const int length)
     {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("range(): data is nullptr or length <= 0");
@@ -219,7 +219,7 @@ namespace MetricLib
      * @throw std::invalid_argument 空指针/长度<=0/数据包含负数（实数范围无几何均值）
      * @note 数据含0时几何均值为0；大数累乘可能存在精度溢出，适用于常规数值范围
      */
-    double geometricMean(const double* data, const int length)
+    inline double geometricMean(const double* data, const int length)
     {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("geometricMean(): data is nullptr or length <= 0");
@@ -246,7 +246,7 @@ namespace MetricLib
      * @throw std::invalid_argument 空指针/长度<=0/数据包含0（倒数无意义）/数据含负数（统计无意义）
      * @note 适用于平均速率、平均密度等正数比值场景
      */
-    double harmonicMean(const double* data, const int length)
+    inline double harmonicMean(const double* data, const int length)
     {
         if (data == nullptr || length <= 0) {
             throw std::invalid_argument("harmonicMean(): data is nullptr or length <= 0");
@@ -273,7 +273,25 @@ namespace MetricLib
      * @throw std::invalid_argument 如果data为空指针或length<=0
      * @note 内部采用线性插值法计算四分位数，不修改原数组
      */
-    QuartileResult interQuartileRange(const double* data, const int length)
+    // 线性插值分位数 quantile(p∈[0,1])。与 interQuartileRange 同口径:length<=3 退化为 median;p 夹到 [0,1]。
+    inline double quantile(const double* data, const int length, double p)
+    {
+        if (data == nullptr || length <= 0) {
+            throw std::invalid_argument("quantile(): data is nullptr or length <= 0");
+        }
+        if (length <= 3) return median(data, length);
+        if (p < 0.0) p = 0.0; else if (p > 1.0) p = 1.0;
+        std::vector<double> sortedData(data, data + length);
+        std::sort(sortedData.begin(), sortedData.end());
+        double pos = static_cast<double>(sortedData.size() - 1) * p;
+        int64_t idx = static_cast<int64_t>(doublelib::floor(pos));
+        double frac = doublelib::round(pos - idx);
+        if (doublelib::isEqualByULP(frac, 0.0)) return sortedData[idx];
+        double diff = sortedData[idx + 1] - sortedData[idx];
+        return sortedData[idx] + frac * diff;
+    }
+
+    inline QuartileResult interQuartileRange(const double* data, const int length)
     {
         QuartileResult result{};
         if (data == nullptr || length <= 0) {

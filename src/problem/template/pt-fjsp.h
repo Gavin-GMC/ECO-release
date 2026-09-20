@@ -1,16 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 柔性作业车间调度 (Flexible Job-Shop Scheduling Problem) 问题模板。
+
 //-------------------------Reference-------------------------
 // Brandimarte (1993) Routing and Scheduling in a Flexible Job Shop。
 // FrontierCO 的 FJSP:Behnke & Geiger (2012) / Naderi & Roshanaei (2021) 实例。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -21,9 +19,9 @@
 #include <cmath>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_FJSP
+    class PT_FJSP : public ProblemTemplate
     {
     public:
         enum class SeqMode { Const, Variable };   // 排序:常量(只优化路由) / 变量(联合优化)
@@ -123,7 +121,8 @@ namespace ECFlow
 
     public:
         PT_FJSP() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_FJSP(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _ops; }
         void setPenalty(double p) { _penalty = p; }
         void setSeqMode(SeqMode m) { _seq = m; }     // 默认 Const(只优化路由)
@@ -135,8 +134,9 @@ namespace ECFlow
         void setData(int ops, int M, std::vector<double> proc, std::vector<int> prev)
         { _ops = ops; _M = M; _proc = std::move(proc); _prev = std::move(prev); }
 
+        // v1.4.9(T-SAVE):回写 EvoFlow/Brandimarte 格式 _pdata/fjsp/<name>.fjsp。按 _prev==-1 边界把展平工序重组为作业,
         //   每作业一行 "nOps [nAlt (机器 时间)×nAlt]×nOps"(机器 1 基);禁用机器(proc==INF)不写入。overwrite=false 不覆盖。
-        void save(bool overwrite = false)
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/fjsp/" + _name + ".fjsp";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("FJSP save: file exists (use overwrite): " + path); return; } }
@@ -159,7 +159,7 @@ namespace ECFlow
             }
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_ops == 0) return nullptr;
             Problem* back = new Problem(_name);
@@ -194,7 +194,7 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "fjsp", "fjsp"));
@@ -236,3 +236,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(fjsp, "FJSP", EvoFlow::PT_FJSP);

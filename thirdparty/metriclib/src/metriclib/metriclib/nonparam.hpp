@@ -46,11 +46,11 @@ namespace MetricLib {
             }
             else {
                 if (is_begin) {
-                    ranks[indices[i]] = i;
+                    ranks[indices[i]] = i + 1;   // 1 基秩(标准;原 0 基致 KW 负 H、MW U 偏移)
                 }
                 else {
                     end_rank = i;
-                    average_rank = (begin_rank + end_rank) / 2.0;
+                    average_rank = (begin_rank + end_rank) / 2.0 + 1;   // 1 基
                     for (int k = begin_rank; k <= end_rank; ++k) {
                         ranks[indices[k]] = average_rank;
                     }
@@ -61,7 +61,7 @@ namespace MetricLib {
 
         // 处理最后一个元素/最后一段结值
         if (is_begin) {
-            ranks[indices[size - 1]] = size - 1;
+            ranks[indices[size - 1]] = size;   // 1 基
         }
         else {
             end_rank = size - 1;
@@ -87,6 +87,10 @@ namespace MetricLib {
         return countMap;
     }
 
+    // 前向声明(精确分布,定义在 kruskal 前;MW/Wilcoxon 在其之前调用故需先声明)
+    static double mannWhitneyExactTwoSided(int n1, int n2, double u_obs);
+    static double wilcoxonExactTwoSided(const double* abs_ranks, int n, double w_obs);
+
     // Mann-Whitney U检验（两独立样本，C风格数组输入）
     // 参数：
     //   sample1/sample2: 样本数组（double*）
@@ -95,7 +99,7 @@ namespace MetricLib {
     //   is_less: 单侧检验方向（true=sample1 < sample2，false=sample1 > sample2，仅two_side=false时生效）
     //   min_is_better: 优化方向（true=越小越好，false=越大越好，默认true）
     // 返回值：U统计量、p值（std::pair<double, double>）
-    std::pair<double, double> mann_whitney_u_test(
+    inline std::pair<double, double> mann_whitney_u_test(
         double* sample1, int len1,
         double* sample2, int len2,
         bool two_side = true,
@@ -143,14 +147,16 @@ namespace MetricLib {
         double tie_correction = 1.0 - tie_term / (total_len * (total_len * total_len - 1));
         var_U *= tie_correction;
 
-        // 连续性修正
-        double numerator = std::abs(U - mean_U) - 0.5;
-        double z = numerator / std::sqrt(var_U);
-
-        // 计算p值（支持单侧/双侧）
-        double p_value = 0.5 * std::erfc(z / std::sqrt(2));
-        if (two_side) {
-            p_value *= 2;
+        // 计算p值:小样本无结值用【精确分布】(对齐 scipy exact),否则正态近似(连续性校正)
+        double p_value;
+        if (two_side && tie_term == 0.0 && len1 <= 20 && len2 <= 20) {
+            p_value = mannWhitneyExactTwoSided(len1, len2, std::min(U1, U2));
+        } else {
+            double numerator = std::abs(U - mean_U) - 0.5;
+            double z = numerator / std::sqrt(var_U);
+            p_value = 0.5 * std::erfc(z / std::sqrt(2));
+            if (two_side) p_value *= 2;
+            if (p_value > 1) p_value = 1;
         }
 
         // 释放内存
@@ -167,7 +173,7 @@ namespace MetricLib {
     //   two_side: 是否双侧检验（bool，默认true）
     //   is_less: 单侧检验方向（true=sample1 < sample2，false=sample1 > sample2，仅two_side=false时生效）
     // 返回值：W统计量、p值（std::pair<double, double>）
-    std::pair<double, double> wilcoxon_signed_rank_test(
+    inline std::pair<double, double> wilcoxon_signed_rank_test(
         double* sample1, double* sample2, int len,
         bool two_side = true,
         bool is_less = true) {
@@ -231,14 +237,16 @@ namespace MetricLib {
         double tie_correction = 1.0 - tie_term / (diff_len * (diff_len * diff_len - 1));
         var_W *= tie_correction;
 
-        // 连续性修正
-        double numerator = std::abs(W - mean_W) - 0.5;
-        double z = numerator / std::sqrt(var_W);
-
-        // 计算p值（支持单侧/双侧）
-        double p_value = 0.5 * std::erfc(z / std::sqrt(2));
-        if (two_side) {
-            p_value *= 2;
+        // 计算p值:小样本用【精确分布】(秩×2 缩放子集和 DP,含结值也精确,对齐 scipy exact);否则正态近似
+        double p_value;
+        if (two_side && diff_len <= 20) {
+            p_value = wilcoxonExactTwoSided(abs_ranks, diff_len, W);
+        } else {
+            double numerator = std::abs(W - mean_W) - 0.5;
+            double z = numerator / std::sqrt(var_W);
+            p_value = 0.5 * std::erfc(z / std::sqrt(2));
+            if (two_side) p_value *= 2;
+            if (p_value > 1) p_value = 1;
         }
 
         // 释放内存
@@ -257,7 +265,69 @@ namespace MetricLib {
     //   group_num: 样本组数（int）
     //   two_side: 是否双侧检验（bool，默认true）
     // 返回值：H统计量、p值（std::pair<double, double>）
-    std::pair<double, double> kruskal_wallis_h_test(
+    // 正则化下不完全伽马 P(a,x)=γ(a,x)/Γ(a)(Numerical Recipes:级数/连分数)。
+    static double regularizedGammaP(double a, double x) {
+        if (x <= 0.0 || a <= 0.0) return 0.0;
+        double lg = std::lgamma(a);
+        if (x < a + 1.0) {                     // 级数展开(P)
+            double ap = a, del = 1.0 / a, sum = del;
+            for (int n = 0; n < 300; ++n) {
+                ap += 1.0; del *= x / ap; sum += del;
+                if (std::abs(del) < std::abs(sum) * 1e-16) break;
+            }
+            return sum * std::exp(-x + a * std::log(x) - lg);
+        } else {                               // 连分数(Q=1-P)
+            double b = x + 1.0 - a, c = 1e300, d = 1.0 / b, h = d;
+            for (int i = 1; i <= 300; ++i) {
+                double an = -1.0 * i * (i - a);
+                b += 2.0; d = an * d + b; if (std::abs(d) < 1e-300) d = 1e-300;
+                c = b + an / c; if (std::abs(c) < 1e-300) c = 1e-300;
+                d = 1.0 / d; double del = d * c; h *= del;
+                if (std::abs(del - 1.0) < 1e-16) break;
+            }
+            return 1.0 - std::exp(-x + a * std::log(x) - lg) * h;
+        }
+    }
+    // 卡方生存函数 chi2.sf(x, df) = Q(df/2, x/2)(对齐 scipy.stats.chi2.sf)。
+    static double chiSquareSurvival(double x, int df) {
+        if (x <= 0.0) return 1.0;
+        return 1.0 - regularizedGammaP(df / 2.0, x / 2.0);
+    }
+
+    // 精确 Mann-Whitney U 双侧 p(无结值时;经典递推 p(m,n,u)=p(m-1,n,u-n)+p(m,n-1,u),对齐 scipy exact)。
+    static double mannWhitneyExactTwoSided(int n1, int n2, double u_obs) {
+        int Umax = n1 * n2;
+        std::vector<std::vector<std::vector<double>>> dp(n1 + 1, std::vector<std::vector<double>>(n2 + 1));
+        for (int m = 0; m <= n1; ++m)
+            for (int n = 0; n <= n2; ++n) {
+                dp[m][n].assign(m * n + 1, 0.0);
+                if (m == 0 || n == 0) { dp[m][n][0] = 1.0; continue; }
+                for (int u = 0; u <= m * n; ++u) {
+                    double a = (u - n >= 0) ? dp[m - 1][n][u - n] : 0.0;
+                    double b = (u <= m * (n - 1)) ? dp[m][n - 1][u] : 0.0;
+                    dp[m][n][u] = a + b;
+                }
+            }
+        double total = 0; for (double c : dp[n1][n2]) total += c;
+        int uo = (int)std::round(u_obs);
+        double cum = 0; for (int u = 0; u <= uo && u <= Umax; ++u) cum += dp[n1][n2][u];
+        return std::min(1.0, 2.0 * cum / total);   // 双侧 = 2×下尾
+    }
+
+    // 精确 Wilcoxon 符号秩双侧 p(小样本;秩×2 缩放使含结的平均秩变整数 → 子集和 DP,对齐 scipy exact)。
+    static double wilcoxonExactTwoSided(const double* abs_ranks, int n, double w_obs) {
+        int Wmax2 = 0; std::vector<int> r2(n);
+        for (int i = 0; i < n; ++i) { r2[i] = (int)std::round(abs_ranks[i] * 2.0); Wmax2 += r2[i]; }
+        std::vector<double> dp(Wmax2 + 1, 0.0); dp[0] = 1.0;
+        for (int i = 0; i < n; ++i)
+            for (int w = Wmax2; w >= r2[i]; --w) dp[w] += dp[w - r2[i]];
+        double total = std::pow(2.0, n);
+        int wo = (int)std::round(w_obs * 2.0);
+        double cum = 0; for (int w = 0; w <= wo && w <= Wmax2; ++w) cum += dp[w];
+        return std::min(1.0, 2.0 * cum / total);
+    }
+
+    inline std::pair<double, double> kruskal_wallis_h_test(
         double** samples, int* lens, int group_num,
         bool two_side = true) {
 
@@ -314,15 +384,12 @@ namespace MetricLib {
         }
         double tie_correction = 1.0 - tie_term / (total_len * (total_len * total_len - 1));
         H /= tie_correction;
+        if (H < 0) H = 0;   // 浮点误差致微负(同分布组 H≈0);守卫 pow(负,1/3)=NaN
 
-        // 卡方近似计算p值（自由度=组数-1）
+        // p 值 = 卡方生存函数(自由度=组数-1;KW 为卡方上尾【单侧】综合)。对齐 scipy.stats.kruskal 的 chi2.sf。
+        (void)two_side;
         int df = group_num - 1;
-        double chi = H;
-        double z = (std::pow(chi / df, 1.0 / 3.0) - (1.0 - 2.0 / (9.0 * df))) / std::sqrt(2.0 / (9.0 * df));
-        double p_value = 1 - 0.5 * (1 + std::erf(z / std::sqrt(2)));
-        if (two_side) {
-            p_value *= 2;
-        }
+        double p_value = chiSquareSurvival(H, df);
 
         // 释放内存
         delete[] merged;
@@ -332,6 +399,69 @@ namespace MetricLib {
         delete[] group_n;
 
         return { H, p_value };
+    }
+
+    // Friedman 检验(K 处理 × N 区块的秩基综合检验,对齐 scipy.stats.friedmanchisquare)。
+    //   data[i][j] = 处理 i(算法) 在区块 j(问题) 的代表值。返回 {χ², p}(方向无关)。
+    inline std::pair<double, double> friedman_test(double** data, int k, int n) {
+        if (k < 2 || n < 1 || data == nullptr)
+            throw std::invalid_argument("Friedman检验：需 k>=2 处理、n>=1 区块");
+        std::vector<double> R(k, 0.0);      // 各处理的秩和
+        double ties = 0.0;                  // 结值项 Σ(t³-t)
+        std::vector<double> block(k);
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i < k; ++i) block[i] = data[i][j];
+            double* r = rankElements(block.data(), k);   // 块内 1 基秩(含结平均)
+            for (int i = 0; i < k; ++i) R[i] += r[i];
+            delete[] r;
+            std::map<double, int> cnt = appearCount(block.data(), k);
+            for (auto& pr : cnt) { double t = pr.second; ties += t * t * t - t; }
+        }
+        double ssbn = 0.0; for (double r : R) ssbn += r * r;
+        double chi = 12.0 / (n * k * (k + 1.0)) * ssbn - 3.0 * n * (k + 1.0);
+        double c = 1.0 - ties / (n * (double)(k * k * k - k));   // scipy 结值校正
+        if (c > 0.0) chi /= c;
+        double p = chiSquareSurvival(chi, k - 1);
+        return { chi, p };
+    }
+
+    // Nemenyi 临界差 CD(Friedman 后验;k 处理、n 区块)。CD=q_α·√(k(k+1)/(6n))。秩差>CD 即成对显著。
+    //   q_α 表(Demšar 2006,α=0.05,k=2..20);目前仅 α=0.05。
+    static double nemenyiCriticalDifference(int k, int n, double alpha = 0.05) {
+        static const double q05[] = { 0, 0, 1.960, 2.343, 2.569, 2.728, 2.850, 2.949, 3.031, 3.102,
+                                      3.164, 3.219, 3.268, 3.313, 3.354, 3.391, 3.426, 3.458, 3.489, 3.517, 3.544 };
+        (void)alpha;
+        double q = (k >= 2 && k <= 20) ? q05[k] : 3.544;
+        return q * std::sqrt((double)k * (k + 1) / (6.0 * n));
+    }
+
+    // Dunn 后验(KW 后,每问题):baseline(组 0) vs 各组 → Bonferroni(K-1)校正双侧 p。
+    //   pooled 秩 + 结值校正 σ²=N(N+1)/12 − Σ(t³-t)/(12(N-1));对齐 scikit-posthocs 未校正 p。padj[0]=NaN。
+    static std::vector<double> dunn_baseline_bonferroni(double** samples, int* lens, int group_num) {
+        std::vector<double> padj(group_num, std::numeric_limits<double>::quiet_NaN());
+        if (group_num < 2 || samples == nullptr || lens == nullptr) return padj;
+        int N = 0; for (int g = 0; g < group_num; ++g) N += lens[g];
+        if (N < 2) return padj;
+        std::vector<double> pooled(N); std::vector<int> mark(N);
+        int pos = 0;
+        for (int g = 0; g < group_num; ++g) for (int i = 0; i < lens[g]; ++i) { pooled[pos] = samples[g][i]; mark[pos] = g; ++pos; }
+        double* ranks = rankElements(pooled.data(), N);
+        std::vector<double> Rsum(group_num, 0.0);
+        for (int i = 0; i < N; ++i) Rsum[mark[i]] += ranks[i];
+        delete[] ranks;
+        std::vector<double> Rbar(group_num);
+        for (int g = 0; g < group_num; ++g) Rbar[g] = Rsum[g] / lens[g];
+        double tie = 0.0; std::map<double, int> cnt = appearCount(pooled.data(), N);
+        for (auto& pr : cnt) { double t = pr.second; tie += t * t * t - t; }
+        double sigma2 = N * (N + 1.0) / 12.0 - tie / (12.0 * (N - 1));
+        int comparisons = group_num - 1;
+        for (int g = 1; g < group_num; ++g) {
+            double se = std::sqrt(sigma2 * (1.0 / lens[0] + 1.0 / lens[g]));
+            double z = (Rbar[0] - Rbar[g]) / se;
+            double p = std::erfc(std::abs(z) / std::sqrt(2.0));   // 双侧
+            padj[g] = std::min(1.0, p * comparisons);             // Bonferroni(K-1)
+        }
+        return padj;
     }
 
 } // namespace MetricLib

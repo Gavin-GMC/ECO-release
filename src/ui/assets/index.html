@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EvoFlow</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo-frame">
+          <img class="brand-logo" src="/brand-logo.png" alt="EvoFlow">
+        </div>
+        <div class="brand-copy">
+          <strong class="brand-tagline">模块化演化计算工作台</strong>
+          <span id="product-version" class="brand-version">EvoFlow</span>
+        </div>
+      </div>
+      <nav aria-label="主导航">
+        <button id="nav-problem" class="nav-item active" type="button" data-page="problem">
+          <span class="nav-index">01</span>
+          <span>问题定义</span>
+        </button>
+        <button id="nav-config" class="nav-item" type="button" data-page="config">
+          <span class="nav-index">02</span>
+          <span>优化器构筑</span>
+        </button>
+        <button id="nav-report" class="nav-item" type="button" data-page="report">
+          <span class="nav-index">03</span>
+          <span>统计分析</span>
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <span id="connection-dot" class="connection-dot"></span>
+        <span id="connection-text">正在连接本地服务</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p id="page-eyebrow" class="eyebrow">优化配置 / 问题定义</p>
+          <h1 id="page-title">加载并检查问题数据</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="language-toggle" class="language-toggle" type="button"
+                  aria-label="Switch to English" title="Switch to English">
+            <span data-language="zh" class="active">中</span>
+            <span class="language-divider">/</span>
+            <span data-language="en">EN</span>
+          </button>
+          <button id="llm-settings-open" class="model-settings-button" type="button"
+                  aria-controls="llm-settings-panel" aria-expanded="false">
+            <span id="llm-top-dot" class="model-status-dot unconfigured"></span>
+            <span>模型设置</span>
+            <small id="llm-top-status">未配置</small>
+          </button>
+          <button id="exit-button" class="ghost-button" type="button">退出 EvoFlow</button>
+        </div>
+      </header>
+
+      <section id="llm-settings-panel" class="llm-settings-panel" hidden
+               aria-labelledby="llm-settings-title">
+        <div class="llm-settings-heading">
+          <div>
+            <span>OpenAI-compatible</span>
+            <h2 id="llm-settings-title">模型连接设置</h2>
+            <p>设置只在当前页面有效；关闭或刷新页面后会清除。</p>
+          </div>
+          <button id="llm-settings-close" class="icon-button" type="button"
+                  aria-label="关闭模型设置">×</button>
+        </div>
+        <div class="llm-settings-grid">
+          <label class="field llm-endpoint-field">完整接口地址
+            <input id="llm-endpoint" type="url" autocomplete="off" spellcheck="false"
+                   placeholder="https://example.com/v1/chat/completions">
+            <small>公网地址必须使用 HTTPS；HTTP 仅允许 127.0.0.1 或 localhost。</small>
+          </label>
+          <label class="field">模型名称
+            <input id="llm-model" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="模型标识">
+          </label>
+          <label class="field">API Key（可选）
+            <input id="llm-api-key" type="password" autocomplete="off" spellcheck="false"
+                   placeholder="本地模型可留空">
+          </label>
+        </div>
+        <div class="llm-settings-footer">
+          <p id="llm-settings-status" class="llm-status-message unconfigured" role="status">
+            填写完整接口地址和模型名称后测试连接。
+          </p>
+          <button id="llm-test" class="primary-button llm-test-button" type="button">
+            测试连接
+          </button>
+        </div>
+        <p class="llm-privacy-note">
+          后续使用模型能力时，问题描述及可选参考数据会发送到你配置的模型服务；EvoFlow 不会把 API Key
+          写入磁盘、浏览器存储或日志。
+        </p>
+      </section>
+
+      <section id="problem-page" class="page">
+        <section class="intro-grid problem-intro">
+          <div>
+            <h2>定义或加载问题</h2>
+            <p>填写描述、附加数据文件，或直接选择标准问题文件。系统会根据输入组合自动选择处理方式，加载后不会自动运行。</p>
+          </div>
+        </section>
+
+        <section class="ai-problem-builder">
+          <div class="ai-problem-heading">
+            <div>
+              <span>Describe · attach · load</span>
+              <h2>提供问题描述与数据</h2>
+              <p>描述与数据文件均为可选，但至少提供一项。系统会自动识别所需流程，无需选择专业问题类型。</p>
+            </div>
+            <button id="llm-problem-entry" class="unified-model-status" type="button">
+              <span class="model-status-mini" aria-hidden="true"></span>
+              <span><strong>模型连接</strong><small id="llm-problem-status">尚未配置</small></span>
+            </button>
+          </div>
+          <label class="ai-description-field" for="ai-problem-description">
+            自然语言描述 <span>可选</span>
+            <textarea id="ai-problem-description" maxlength="65536"
+                      placeholder="说明对象、目标和约束。例如：我想访问附件中的所有地点，请规划总路程最短的路线。"></textarea>
+          </label>
+
+          <section id="drop-zone" class="drop-zone unified-drop-zone" tabindex="0"
+                   aria-label="选择或拖入问题数据文件">
+            <input id="file-input" type="file" hidden>
+            <div class="upload-icon" aria-hidden="true">↥</div>
+            <div class="drop-zone-copy">
+              <h2>问题数据文件 <span>可选</span></h2>
+              <p>点击浏览或拖入文件；可以是标准问题文件，也可以是配合描述使用的文本、CSV、TSV 或 JSON 数据。</p>
+              <small>标准文件最大 64 MiB；作为模型参考数据时须为文本且不超过 1 MiB</small>
+            </div>
+            <button id="choose-button" class="secondary-button" type="button">浏览文件</button>
+            <div id="selected-problem-file" class="selected-problem-file" hidden>
+              <span aria-hidden="true">DATA</span>
+              <div><strong id="selected-problem-file-name"></strong><small id="selected-problem-file-size"></small></div>
+              <button id="clear-problem-file" type="button" aria-label="移除所选文件">×</button>
+            </div>
+          </section>
+
+          <div class="ai-problem-actions">
+            <p id="problem-input-privacy">系统会优先在本地识别标准问题文件；只有需要模型理解描述或转换参考数据时，相关内容才会发送到你配置的模型服务。</p>
+            <div class="problem-primary-action">
+              <button id="ai-problem-build" class="primary-button" type="button">
+                定义或加载问题
+              </button>
+            </div>
+          </div>
+          <ol id="ai-problem-progress" class="ai-problem-progress" hidden>
+            <li id="ai-step-classify" class="ai-step pending">
+              <span class="ai-step-index">1</span>
+              <span><strong>识别问题类型</strong><small id="ai-classified-type">等待识别</small></span>
+            </li>
+            <li id="ai-step-generate" class="ai-step pending">
+              <span class="ai-step-index">2</span>
+              <span><strong>生成并检查问题</strong><small>自动确认数据是否完整可用</small></span>
+            </li>
+          </ol>
+          <p id="ai-problem-message" class="ai-problem-message" hidden role="status"></p>
+        </section>
+
+        <div id="message" class="message" hidden role="status"></div>
+
+        <section id="results" class="results" hidden>
+          <div class="problem-results-toolbar">
+            <div>
+              <span>Current problem</span>
+              <strong>当前问题已保留在本次会话中</strong>
+              <small>另存会写出原始载入数据或模型生成并通过检查的数据，不改变问题格式。</small>
+            </div>
+            <button id="problem-save-as" class="toolbar-button" type="button">另存问题</button>
+          </div>
+
+          <div class="summary">
+            <article><span>问题名称</span><strong id="summary-name">—</strong></article>
+            <article><span>问题类型</span><strong id="summary-type">—</strong></article>
+            <article><span>决策维度</span><strong id="summary-dimension">—</strong></article>
+            <article><span>定义规模</span><strong id="summary-counts">—</strong></article>
+          </div>
+
+          <section class="data-panel">
+            <div class="panel-heading">
+              <div><span>Variables</span><h2>变量</h2></div>
+              <strong id="variable-count">0</strong>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>名称</th><th>种类</th><th>变量类型</th><th>长度</th><th>下界</th><th>上界</th></tr></thead>
+                <tbody id="variables-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="data-panel">
+            <div class="panel-heading">
+              <div><span>Objectives</span><h2>目标</h2></div>
+              <strong id="objective-count">0</strong>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>名称</th><th>方向</th><th>优先级</th><th>关联变量</th></tr></thead>
+                <tbody id="objectives-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="data-panel">
+            <div class="panel-heading">
+              <div><span>Constraints</span><h2>约束</h2></div>
+              <strong id="constraint-count">0</strong>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>类型</th><th>作用变量</th><th>惩罚系数</th><th>施加目标</th></tr></thead>
+                <tbody id="constraints-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <section id="config-page" class="page config-page" hidden>
+        <div class="editor-toolbar">
+          <div class="toolbar-group">
+            <button id="config-new" class="toolbar-button" type="button">新建</button>
+            <button id="config-open" class="toolbar-button" type="button">打开 .cfg</button>
+            <input id="config-file-input" type="file" accept=".cfg,.json" hidden>
+            <button id="config-save" class="toolbar-button primary-compact" type="button">保存</button>
+            <button id="config-save-as" class="toolbar-button" type="button">另存为</button>
+          </div>
+          <div class="toolbar-group toolbar-right">
+            <div class="editor-view-switch" role="group" aria-label="构筑视图">
+              <button id="config-view-form" class="view-switch active" type="button">表单</button>
+              <button id="config-view-flow" class="view-switch" type="button">积木</button>
+            </div>
+            <label class="compact-field">格式
+              <select id="config-version">
+                <option value="v3.1">v3.1 文本</option>
+                <option value="v3.2">v3.2 JSON</option>
+              </select>
+            </label>
+            <span id="config-status" class="status-badge pending">等待校验</span>
+            <button id="config-deep-validate" class="toolbar-button" type="button">装配验证</button>
+          </div>
+        </div>
+
+        <section class="run-control-bar" aria-label="运行设置">
+          <div class="run-control-copy">
+            <strong>运行设置</strong>
+            <small>切换或载入配置时保持不变</small>
+          </div>
+          <div class="run-control-fields">
+            <label class="compact-field">运行标签
+              <input id="config-run-tag" class="compact-tag-input" type="text"
+                     maxlength="128" pattern="[A-Za-z0-9_.-]*"
+                     placeholder="留空则使用配置值">
+            </label>
+            <label class="compact-field">种子
+              <input id="config-run-seed" class="compact-number-input" type="number"
+                     min="0" max="4294967295" step="1" value="1" inputmode="numeric">
+            </label>
+            <label class="compact-field">运行轮数
+              <input id="config-run-runs" class="compact-number-input" type="number"
+                     min="1" max="10000" step="1" value="1" inputmode="numeric">
+            </label>
+            <label class="compact-field">结果起点
+              <input id="config-run-start" class="compact-number-input" type="number"
+                     min="0" max="2147483647" step="1" inputmode="numeric"
+                     placeholder="自动">
+            </label>
+            <label class="compact-field">
+              <span>覆写旧结果</span>
+              <input id="config-replace-existing" type="checkbox" disabled>
+            </label>
+            <button id="config-run" class="toolbar-button primary-compact" type="button">运行当前配置</button>
+          </div>
+        </section>
+
+        <section class="config-recommend-card">
+          <div class="config-recommend-copy">
+            <span>Model assisted</span>
+            <h2>从现有配置中推荐</h2>
+            <p>根据当前问题从现有配置中选择合适方案。模型不会生成或修改配置，是否保存以及保存位置仍由你决定。</p>
+          </div>
+          <div class="config-recommend-action">
+            <button id="config-recommend" class="primary-button" type="button">根据当前问题推荐</button>
+            <p id="config-recommend-status" class="config-recommend-status" role="status">请先加载问题并连接模型服务。</p>
+          </div>
+        </section>
+
+        <div id="config-message" class="message config-message" hidden role="status"></div>
+
+        <section id="config-run-result" class="run-result-card" hidden>
+          <div class="run-result-heading">
+            <div>
+              <span>Execution</span>
+              <h2>当前配置运行结果</h2>
+              <p>使用当前问题和配置运行；终止条件取自配置，运行标签、种子与轮数按“运行设置”执行。</p>
+            </div>
+            <span id="config-run-state" class="status-badge pending">等待运行</span>
+          </div>
+          <div id="config-run-progress" class="run-progress" hidden>
+            <div class="run-progress-heading">
+              <span id="config-run-progress-text">准备运行</span>
+              <strong id="config-run-progress-percent">0%</strong>
+            </div>
+            <progress id="config-run-progress-bar" max="1" value="0"></progress>
+          </div>
+          <div id="config-run-pagination" class="run-pagination" hidden>
+            <button id="config-run-previous" class="icon-button" type="button"
+                    aria-label="查看上一轮结果">←</button>
+            <span>运行结果 <strong id="config-run-page-label">第 1 / 1 轮</strong></span>
+            <button id="config-run-next" class="icon-button" type="button"
+                    aria-label="查看下一轮结果">→</button>
+          </div>
+          <div id="config-run-summary" class="run-result-summary"></div>
+          <div id="config-run-solutions" class="run-solution-list"></div>
+        </section>
+
+        <div class="config-workspace">
+          <aside class="config-rail">
+            <section class="rail-card">
+              <div class="rail-heading">
+                <div><span>Structure</span><h2>配置结构</h2></div>
+              </div>
+              <div id="config-outline" class="config-outline"></div>
+            </section>
+
+            <section class="rail-card catalog-card">
+              <div class="rail-heading">
+                <div><span>Catalog</span><h2>组件目录 · 12 类</h2></div>
+              </div>
+              <div class="catalog-search" role="search">
+                <span aria-hidden="true">⌕</span>
+                <input id="component-catalog-search" type="search"
+                       autocomplete="off" spellcheck="false"
+                       aria-label="检索组件名称或类别"
+                       placeholder="检索组件名称或类别">
+                <button id="component-catalog-search-clear" type="button"
+                        aria-label="清除检索" title="清除检索" hidden>×</button>
+              </div>
+              <p id="component-catalog-summary" class="catalog-search-summary"
+                 role="status"></p>
+              <div id="component-catalog-tree" class="catalog-tree">
+                <p class="muted">正在读取可用组件…</p>
+              </div>
+            </section>
+          </aside>
+
+          <div class="config-content">
+            <section id="config-flow" class="editor-card flow-editor-card" hidden>
+              <div class="flow-heading">
+                <div>
+                  <span>Block workflow</span>
+                  <h2 id="flow-title">积木式 Workflow</h2>
+                  <p>拖入组件后可自由排列；有向箭头表示执行顺序。完整单链会自动写回配置。</p>
+                </div>
+                <div class="flow-heading-tools">
+                  <div class="flow-legend" aria-label="连接状态图例">
+                    <span class="satisfied">满足</span>
+                    <span class="informational">信息</span>
+                    <span class="notfullysatisfied">有警告</span>
+                    <span class="failsatisfied">数量不足</span>
+                    <span class="unsatisfied">不满足</span>
+                    <span class="isolated">临时孤立</span>
+                  </div>
+                  <div class="flow-zoom-controls" role="group" aria-label="画布缩放">
+                    <button id="flow-zoom-out" class="icon-button" type="button"
+                            aria-label="缩小画布" title="缩小画布">−</button>
+                    <button id="flow-zoom-reset" class="flow-zoom-value" type="button"
+                            aria-label="重置画布缩放" title="重置画布缩放">100%</button>
+                    <button id="flow-zoom-in" class="icon-button" type="button"
+                            aria-label="放大画布" title="放大画布">+</button>
+                    <button id="flow-auto-layout" class="toolbar-button" type="button"
+                            title="自动整理布局">自动整理</button>
+                    <button id="flow-fit-view" class="toolbar-button" type="button"
+                            title="适应工作流全貌">适应全貌</button>
+                    <button id="flow-focus-mode" class="toolbar-button" type="button"
+                            aria-pressed="false" title="画布全屏">画布全屏</button>
+                  </div>
+                </div>
+              </div>
+              <div id="flow-message" class="flow-message" hidden role="status"></div>
+              <div class="flow-layout">
+                <aside id="flow-catalog-float" class="flow-catalog-float"
+                       aria-label="浮动算子库" aria-hidden="true">
+                  <div class="flow-catalog-float-heading">
+                    <div><span>Operators</span><strong>可用算子</strong></div>
+                    <button id="flow-catalog-toggle" class="icon-button" type="button"
+                            aria-expanded="true" aria-label="收起算子库"
+                            title="收起算子库">−</button>
+                  </div>
+                  <div class="flow-catalog-body">
+                    <div class="catalog-search" role="search">
+                      <span aria-hidden="true">⌕</span>
+                      <input id="flow-catalog-search" type="search"
+                             autocomplete="off" spellcheck="false"
+                             aria-label="检索组件名称或类别"
+                             placeholder="检索组件名称或类别">
+                      <button id="flow-catalog-search-clear" type="button"
+                              aria-label="清除检索" title="清除检索" hidden>×</button>
+                    </div>
+                    <p id="flow-catalog-summary" class="catalog-search-summary"
+                       role="status"></p>
+                    <div id="flow-catalog-tree" class="catalog-tree">
+                      <p class="muted">正在读取可用组件…</p>
+                    </div>
+                    <p class="flow-catalog-hint">拖入画布或双击追加</p>
+                  </div>
+                </aside>
+                <div id="flow-canvas-shell" class="flow-canvas-shell">
+                  <svg id="flow-canvas" class="flow-canvas" role="application"
+                       aria-label="Workflow 积木画布"></svg>
+                </div>
+                <aside id="flow-inspector" class="flow-inspector">
+                  <div class="empty-state compact">选择积木后在这里检查连接关系并编辑参数。</div>
+                </aside>
+              </div>
+            </section>
+
+            <section id="config-form" class="editor-card">
+              <div class="empty-state">正在初始化配置编辑器…</div>
+            </section>
+
+            <section class="validation-card">
+              <div class="validation-heading">
+                <div>
+                  <span>Validation</span>
+                  <h2>配置校验</h2>
+                </div>
+                <small id="validation-summary">等待校验</small>
+              </div>
+              <div id="validation-list" class="validation-list">
+                <div class="empty-state compact">修改配置后会自动校验。</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section id="report-page" class="page report-page" hidden>
+        <section class="report-source data-panel">
+          <div>
+            <span>Log root</span>
+            <h2>扫描实验批次</h2>
+            <p>输入结果日志目录。相对路径以 EvoFlow 启动目录为基准，也可输入本机绝对路径。</p>
+          </div>
+          <div class="path-control">
+            <input id="report-log-path" type="text" value="_log" aria-label="结果日志目录">
+            <button id="report-scan" class="primary-button" type="button">扫描批次</button>
+          </div>
+        </section>
+
+        <div id="report-message" class="message" hidden role="status"></div>
+
+        <div class="report-setup">
+          <section class="data-panel report-batch-panel">
+            <div class="panel-heading">
+              <div><span>Batches</span><h2>实验批次</h2></div>
+              <strong id="report-batch-count">0</strong>
+            </div>
+            <div id="report-batches" class="batch-list">
+              <div class="empty-state compact">扫描日志目录后在这里选择 tag。</div>
+            </div>
+          </section>
+
+          <section id="report-selection" class="data-panel report-selection" hidden>
+            <div class="panel-heading">
+              <div><span>Selection</span><h2 id="report-selection-title">报告范围</h2></div>
+              <span id="report-ragged-badge" class="status-badge warning" hidden>数据不齐</span>
+            </div>
+            <div class="selection-content">
+              <div class="selection-group">
+                <div class="selection-heading">
+                  <strong>优化器</strong>
+                  <button class="text-button" type="button" data-toggle-report="optimizers">全选 / 清空</button>
+                </div>
+                <div id="report-optimizer-options" class="choice-grid"></div>
+              </div>
+              <div class="selection-group">
+                <div class="selection-heading">
+                  <strong>问题</strong>
+                  <button class="text-button" type="button" data-toggle-report="problems">全选 / 清空</button>
+                </div>
+                <div id="report-problem-options" class="choice-grid"></div>
+              </div>
+              <details class="analysis-settings" open>
+                <summary>
+                  <span>分析设置</span>
+                  <strong>单个归约指标 · 多个统计与比较指标 · 自选图表</strong>
+                </summary>
+                <div class="analysis-settings-body">
+                  <section class="analysis-stage">
+                    <div class="analysis-stage-heading">
+                      <div><span>1 · Reduction</span><h3>单次运行归约</h3></div>
+                      <small>每份报告仅一个</small>
+                    </div>
+                    <div class="analysis-inline-fields">
+                      <label class="field">类别
+                        <select id="report-reducer-kind">
+                          <option value="statistic">描述统计</option>
+                          <option value="percentile">分位数</option>
+                          <option value="indicator">质量指标</option>
+                        </select>
+                      </label>
+                      <label class="field" id="report-reducer-metric-field">指标
+                        <select id="report-reducer-metric"></select>
+                      </label>
+                      <label class="field" id="report-reducer-objective-field">目标列
+                        <input id="report-reducer-objective" type="number" min="0" step="1" value="0">
+                      </label>
+                      <label class="field" id="report-reducer-percentile-field" hidden>分位点
+                        <input id="report-reducer-percentile" type="number" min="0" max="1" step="0.01" value="0.5">
+                      </label>
+                    </div>
+                    <div id="report-reference-fields" class="reference-fields" hidden></div>
+                  </section>
+
+                  <section class="analysis-stage">
+                    <div class="analysis-stage-heading">
+                      <div><span>2 · Aggregation</span><h3>跨轮统计</h3></div>
+                      <div class="analysis-add-control">
+                        <select id="report-statistic-add" aria-label="选择统计指标"></select>
+                        <button id="report-statistic-add-button" class="toolbar-button" type="button">添加</button>
+                      </div>
+                    </div>
+                    <div id="report-statistics" class="analysis-item-list"></div>
+                  </section>
+
+                  <section class="analysis-stage">
+                    <div class="analysis-stage-heading">
+                      <div><span>3 · Comparison</span><h3>优化器比较</h3></div>
+                      <div class="analysis-add-control">
+                        <select id="report-comparison-add" aria-label="选择比较指标"></select>
+                        <button id="report-comparison-add-button" class="toolbar-button" type="button">添加</button>
+                      </div>
+                    </div>
+                    <label class="field compact-field">基准优化器
+                      <select id="report-baseline"></select>
+                    </label>
+                    <div id="report-comparisons" class="analysis-item-list"></div>
+                  </section>
+
+                  <section class="analysis-stage analysis-chart-stage">
+                    <div class="analysis-stage-heading">
+                      <div><span>Charts</span><h3>报告图表</h3></div>
+                      <div class="analysis-add-control">
+                        <select id="report-chart-add" aria-label="选择图表"></select>
+                        <button id="report-chart-add-button" class="toolbar-button" type="button">添加图表</button>
+                      </div>
+                    </div>
+                    <div id="report-chart-settings" class="analysis-item-list chart-setting-list"></div>
+                  </section>
+                </div>
+              </details>
+              <button id="report-generate" class="primary-button report-generate" type="button">生成统计报告</button>
+            </div>
+          </section>
+        </div>
+
+        <section id="report-results" class="report-results" hidden>
+          <div class="summary">
+            <article><span>批次</span><strong id="report-summary-tag">—</strong></article>
+            <article><span>优化器</span><strong id="report-summary-optimizers">—</strong></article>
+            <article><span>问题</span><strong id="report-summary-problems">—</strong></article>
+            <article><span>共同重复次数</span><strong id="report-summary-repeats">—</strong></article>
+          </div>
+
+          <section class="data-panel">
+            <div class="panel-heading">
+              <div><span>Statistics</span><h2>统计表</h2></div>
+            </div>
+            <div class="table-wrap">
+              <table id="report-table" class="report-table"></table>
+            </div>
+          </section>
+
+          <details class="png-settings data-panel">
+            <summary>PNG 下载设置与字体依赖</summary>
+            <div class="png-settings-grid">
+              <label class="field">英文字体
+                <input id="report-latin-font" type="text" value="C:/Windows/Fonts/times.ttf">
+              </label>
+              <label class="field">中文字体
+                <input id="report-cjk-font" type="text" value="C:/Windows/Fonts/simsun.ttc">
+              </label>
+              <label class="field">分辨率倍率
+                <input id="report-png-scale" type="number" min="0.25" max="8" step="0.25" value="2">
+              </label>
+            </div>
+            <p>页内 SVG 不依赖系统字体。PNG 会在运行期读取以上字体文件；项目不会分发商业字体。</p>
+          </details>
+
+          <div id="report-charts" class="report-chart-grid"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="/i18n.js"></script>
+  <script src="/app.js"></script>
+  <script src="/llm-settings.js"></script>
+  <script src="/problem-builder.js"></script>
+  <script src="/flow-editor.js"></script>
+  <script src="/config-editor.js"></script>
+  <script src="/config-recommender.js"></script>
+  <script src="/report-viewer.js"></script>
+</body>
+</html>

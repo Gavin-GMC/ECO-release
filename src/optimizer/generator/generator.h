@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 子代生成器 OffspringGenerator:亲代个体依学习图(topology 产出)+ 学习策略生成子代。4 种生成框架。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <queue>
@@ -22,13 +17,20 @@
 #include "solution-repairman.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class OffspringGenerator
     {
     protected:
         bool _inplace;
         ProblemHandle* _problem;
+
+        // 非零端点图以首端点 nullptr 表示“本行不学习、直接透传”。
+        // 零端点图（如 Isolate）没有可解引用的 learning_objects[0]，必须先按数量短路。
+        static bool shouldPassThrough(LearningGraph* graph, Solution** learning_objects) noexcept
+        {
+            return graph->getEndSize() != 0 && learning_objects[0] == nullptr;
+        }
 
     public:
         OffspringGenerator(bool inplace) : _inplace(inplace), _problem(nullptr) {}
@@ -85,7 +87,7 @@ namespace ECFlow
                     child = &offspring[i + offspring_size];
                 }
 
-                if (learning_objects[0] == nullptr && graph->getEndSize() != 0) // 不学习,直接进入子代
+                if (shouldPassThrough(graph, learning_objects)) // 不学习,直接进入子代
                 {
                     child->copy(*individual);
                     child->has_evaluted = true;
@@ -157,7 +159,7 @@ namespace ECFlow
                     child = &offspring[i + offspring_size];
                 }
 
-                if (learning_objects[0] == nullptr && graph->getEndSize() != 0)
+                if (shouldPassThrough(graph, learning_objects))
                 {
                     child->copy(*individual);
                     child->has_evaluted = true;
@@ -219,7 +221,7 @@ namespace ECFlow
                     child = &offspring[i + offspring_size];
                 }
 
-                if (learning_objects[0] == nullptr && graph->getEndSize() != 0)
+                if (shouldPassThrough(graph, learning_objects))
                 {
                     child->copy(*individual);
                     child->has_evaluted = true;
@@ -263,7 +265,8 @@ namespace ECFlow
             if (_handle_buffer_number >= size) return;
 
             ProblemHandle** _new_handles = new ProblemHandle * [size];
-            memcpy(_new_handles, _problem_handles, sizeof(ProblemHandle*) * _handle_buffer_number);
+            if (_handle_buffer_number > 0)
+                memcpy(_new_handles, _problem_handles, sizeof(ProblemHandle*) * _handle_buffer_number);
             for (int i = _handle_buffer_number; i < size; i++)
                 _new_handles[i] = new ProblemHandle(*_problem);
 
@@ -345,7 +348,7 @@ namespace ECFlow
                         child = &offspring[i + offspring_size];
                     }
 
-                    if (learning_objects[0] == nullptr && graph->getEndSize() != 0)
+                    if (shouldPassThrough(graph, learning_objects))
                     {
                         child->copy(*individual);
                         child->has_evaluted = true;
@@ -372,20 +375,29 @@ namespace ECFlow
         }
     };
 
+    inline void generatorStatePostAssert(AssertList& list)
+    {
+        // 描述一次成功 Generator 执行后的状态。AssertMatcher 不累计这些声明，
+        // 而是随 Evaluator/Selector/workflow 边界显式更新同名运行状态。
+        list.add(new Assert(ModuleType::T_offspringgenerator, "offspringAvailable", 1, MatchType::postAssert));
+        list.add(new Assert(ModuleType::T_offspringgenerator, "unevaluatedOffspringAvailable", 1, MatchType::postAssert));
+        list.add(new Assert(ModuleType::T_offspringgenerator, "lastGraphAvailable", 1, MatchType::postAssert));
+    }
+
     // 自注册进 Registry<OffspringGenerator>(T_offspringgenerator)。参数:inplace(bool)。
     inline Registry<OffspringGenerator>::Entry generationEntry()
     {
         return { "Generation", ModuleType::T_offspringgenerator,
             ParameterTemplate{ { {"inplace", ParamKind::Enum, 0, 1, false, 0, 0} } }, sizeof(GeneratorWithGenerationFramework),
             [](const double* p) -> OffspringGenerator* { return p ? new GeneratorWithGenerationFramework(p[0] != 0) : new GeneratorWithGenerationFramework(); },
-            [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
+            [](AssertList&, const double*) {}, [](AssertList& L, const double*) { generatorStatePostAssert(L); } };
     }
     inline Registry<OffspringGenerator>::Entry generationNoCheckEntry()
     {
         return { "GenerationNoCheck", ModuleType::T_offspringgenerator,
             ParameterTemplate{ { {"inplace", ParamKind::Enum, 0, 1, false, 0, 0} } }, sizeof(GeneratorWithNoCheckGeneration),
             [](const double* p) -> OffspringGenerator* { return p ? new GeneratorWithNoCheckGeneration(p[0] != 0) : new GeneratorWithNoCheckGeneration(); },
-            [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
+            [](AssertList&, const double*) {}, [](AssertList& L, const double*) { generatorStatePostAssert(L); } };
     }
     inline Registry<OffspringGenerator>::Entry orderedConstructEntry()
     {
@@ -394,7 +406,7 @@ namespace ECFlow
             [](const double* p) -> OffspringGenerator* { return p ? new GeneratorWithOrderedConstruct(p[0] != 0) : new GeneratorWithOrderedConstruct(); },
             // preAssert:要求 constructive 策略(拼写 "constructive" 沿用原样,记 ASSERT-REVIEW)
             [](AssertList& L, const double*) { L.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::equal)); },
-            [](AssertList&, const double*) {} };
+            [](AssertList& L, const double*) { generatorStatePostAssert(L); } };
     }
     inline Registry<OffspringGenerator>::Entry parallelConstructEntry()
     {
@@ -402,10 +414,10 @@ namespace ECFlow
             ParameterTemplate{ { {"inplace", ParamKind::Enum, 0, 1, false, 0, 0} } }, sizeof(GeneratorWithParallelConstruct),
             [](const double* p) -> OffspringGenerator* { return p ? new GeneratorWithParallelConstruct(p[0] != 0) : new GeneratorWithParallelConstruct(); },
             [](AssertList& L, const double*) { L.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::equal)); },
-            [](AssertList&, const double*) {} };
+            [](AssertList& L, const double*) { generatorStatePostAssert(L); } };
     }
-    ECFLOW_REGISTER(gen_generation,        OffspringGenerator, generationEntry());
-    ECFLOW_REGISTER(gen_generationnocheck, OffspringGenerator, generationNoCheckEntry());
-    ECFLOW_REGISTER(gen_orderedconstruct,  OffspringGenerator, orderedConstructEntry());
-    ECFLOW_REGISTER(gen_parallelconstruct, OffspringGenerator, parallelConstructEntry());
+    EVOFLOW_REGISTER(gen_generation,        OffspringGenerator, generationEntry());
+    EVOFLOW_REGISTER(gen_generationnocheck, OffspringGenerator, generationNoCheckEntry());
+    EVOFLOW_REGISTER(gen_orderedconstruct,  OffspringGenerator, orderedConstructEntry());
+    EVOFLOW_REGISTER(gen_parallelconstruct, OffspringGenerator, parallelConstructEntry());
 }

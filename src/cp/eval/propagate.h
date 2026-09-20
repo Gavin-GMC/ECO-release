@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/eval/propagate.h
 //
@@ -28,7 +30,7 @@
 #include "cp/compile/program.h"
 #include "cp/domain/variable_domain.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 struct SolveReport {
     bool   feasible   = true;   // 是否存在可行域（无变量域被收空）
@@ -84,7 +86,7 @@ private:
 
     static double inf() { return std::numeric_limits<double>::infinity(); }
     static interval_set one_set()  { return interval_set::singleton(1.0); }
-    static interval_set seg(double lo, double hi) { return interval_set(ECFlow::interval(lo, hi)); }
+    static interval_set seg(double lo, double hi) { return interval_set(EvoFlow::interval(lo, hi)); }
 
     void mark_changed(int slot) {
         if (!changed_mark_[slot]) { changed_mark_[slot] = 1; changed_list_.push_back(slot); }
@@ -188,4 +190,4 @@ inline SolveReport propagate(State& st, bool force_full = false) {
     return p.run(force_full);
 }
 
-} // namespace ECFlow
+} // namespace EvoFlow

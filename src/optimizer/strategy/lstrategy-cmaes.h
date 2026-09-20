@@ -1,12 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // CMA-ES(协方差矩阵自适应进化策略)学习策略:维护多元正态 N(m,σ²C),从中采样、用选出父代更新 m/C/σ/进化路径。
 //   分布型策略(类 EDA/ES),连续优化。topology=Isolate、selector=Rank((μ+λ))、individual=Individual(状态全在策略)。
-//-------------------------Reference-------------------------
-// Hansen & Ostermeier CMA-ES(标准公式,参照 purecmaes)。特征分解用自实现 jacobiEigen(ecflow-eigen.h)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -17,11 +13,12 @@
 #include "individual.h"
 #include "individual-array.h"
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
-#include "ecflow-eigen.h"
+#include "evoflow-rand.h"
+#include "evoflow-basicfunc.h"
+#include "evoflow-eigen.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class CMAES : public LearningStrategy
     {
@@ -33,7 +30,15 @@ namespace ECFlow
         std::vector<double> _m, _pc, _ps;     // 均值 / 进化路径(n)
         std::vector<double> _C, _B;           // 协方差 / 特征向量(n×n)
         std::vector<double> _D;               // 特征值平方根(n)
+        std::vector<double> _domain_center;   // 无完整初始解时的有限域中心
         bool _inited;
+
+        bool _complete(const Solution& solution) const
+        {
+            for (int d = 0; d < _n; d++)
+                if (is_empty(solution.result[d])) return false;
+            return true;
+        }
 
         void _setupParams()
         {
@@ -59,7 +64,18 @@ namespace ECFlow
         ~CMAES() {}
 
         void ini(ProblemHandle*) override { _inited = false; _sigma = _sigma0; _gen = 0; }
-        void setProblem(ProblemHandle* problem_handle) override { _n = problem_handle->getProblemSize(); }
+        void setProblem(ProblemHandle* problem_handle) override
+        {
+            _n = problem_handle->getProblemSize();
+            _domain_center.assign(_n, 0.0);
+            for (int d = 0; d < _n; d++)
+            {
+                double lb = problem_handle->getVariableLowbound(d);
+                double ub = problem_handle->getVariableUpbound(d);
+                if (!is_empty(lb) && !is_empty(ub) && std::isfinite(lb) && std::isfinite(ub))
+                    _domain_center[d] = lb + (ub - lb) * 0.5;
+            }
+        }
 
         static void preAssert(AssertList& list, double*)
         {
@@ -74,9 +90,17 @@ namespace ECFlow
                 _lambda = population.getSize();
                 _setupParams();
                 _m.assign(n, 0.0);
+                int complete_count = 0;
                 for (int k = 0; k < population.getSize(); k++)
+                {
+                    if (!_complete(population[k].solution)) continue;
                     for (int d = 0; d < n; d++) _m[d] += population[k].solution.result[d];
-                for (int d = 0; d < n; d++) _m[d] /= population.getSize();   // 初始均值=种群均值
+                    complete_count++;
+                }
+                if (complete_count > 0)
+                    for (int d = 0; d < n; d++) _m[d] /= complete_count;
+                else
+                    _m = _domain_center;
                 _pc.assign(n, 0.0); _ps.assign(n, 0.0);
                 _C.assign((size_t)n * n, 0.0); _B.assign((size_t)n * n, 0.0);
                 for (int i = 0; i < n; i++) { _C[i * n + i] = 1.0; _B[i * n + i] = 1.0; }   // C=B=I
@@ -86,10 +110,16 @@ namespace ECFlow
             }
 
             // 收敛/退化冻结:σ 缩到极小(离散网格下过度收敛)时,y=(x-m)/σ 会除以极小值发散 → 冻结分布更新
-            //   (等价真 CMA-ES 的 TolX/TolFun 停止准则;ECFlow 跑满 FES 无此准则,故内建守卫)。继续以当前紧分布采样。
+            //   (等价真 CMA-ES 的 TolX/TolFun 停止准则;EvoFlow 跑满 FES 无此准则,故内建守卫)。继续以当前紧分布采样。
             if (!std::isfinite(_sigma) || _sigma < 1e-12) return;
 
             population.sort();   // 最优在前
+            std::vector<int> parent_ids;
+            parent_ids.reserve(_mu);
+            for (int i = 0; i < population.getSize() && (int)parent_ids.size() < _mu; i++)
+                if (_complete(population[i].solution)) parent_ids.push_back(i);
+            if ((int)parent_ids.size() < _mu) return;   // 完整父代不足:冻结本代分布更新,继续按当前分布采样
+
             std::vector<double> m_old = _m;
 
             // 各选中父代的标准化偏移 y_i、新均值 m
@@ -98,8 +128,9 @@ namespace ECFlow
             for (int i = 0; i < _mu; i++)
                 for (int d = 0; d < n; d++)
                 {
-                    yk[i][d] = (population[i].solution.result[d] - m_old[d]) / _sigma;
-                    m_new[d] += _weights[i] * population[i].solution.result[d];
+                    double parent_value = population[parent_ids[i]].solution.result[d];
+                    yk[i][d] = (parent_value - m_old[d]) / _sigma;
+                    m_new[d] += _weights[i] * parent_value;
                 }
             std::vector<double> yw(n);                         // <y>_w = Σ w_i y_i = (m_new-m_old)/σ
             for (int d = 0; d < n; d++) yw[d] = (m_new[d] - m_old[d]) / _sigma;
@@ -162,5 +193,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { CMAES::preAssert(L, const_cast<double*>(p)); },
             [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_cmaes, LearningStrategy, cmaesEntry());
+    EVOFLOW_REGISTER(lstrat_cmaes, LearningStrategy, cmaesEntry());
 }

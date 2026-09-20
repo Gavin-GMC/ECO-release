@@ -1,22 +1,18 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // PSO 学习拓扑 PGBestTopology:每个个体向 gbest(全局最优档案)与自身 pbest 学习。
+
 //-------------------------Reference-------------------------
 // [1] J. Kennedy and R. Eberhart, "Particle Swarm Optimization," in Proc. ICNN'95 - Int. Conf. Neural
 //     Networks, Perth, WA, Australia, 1995, vol. 4, pp. 1942-1948, doi: 10.1109/ICNN.1995.488968.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-topology.h"
 #include "individual.h"       // getTopology 用 feature<SolutionFeature>(pbest)
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class PGBestTopology : public LearningTopology
     {
@@ -70,5 +66,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { PGBestTopology::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { PGBestTopology::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_pgbest, LearningTopology, psoTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_pgbest, LearningTopology, psoTopologyEntry());
 }

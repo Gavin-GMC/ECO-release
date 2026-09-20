@@ -1,15 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 学习拓扑聚合头:一次性引入 LearningGraph + 基类 + 全部具体拓扑(触发各自向 Registry<LearningTopology> 自注册)。
 //   供上层(如 OffspringGenerator)单头引入整族。
-//-------------------------Reference-------------------------
-// 对应原 ltopology-factory.h 的"汇总"作用(注册表模式下由各文件自注册,本头仅聚合 include)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-graph.h"
@@ -25,6 +18,11 @@
 #include "ltopology-ga.h"
 #include "ltopology-ranked.h"
 #include "ltopology-leader-random.h"
+#include "ltopology-leaderrandomcenter.h"   // LeaderRandomCenter:最优+随机+逐维种群均值(供 RSA/ReptileEncircling)
+#include "ltopology-leadertworandom.h"      // LeaderTwoRandom:最优+两随机(供 MPA/MarinePredatorMotion 的 FADs 差分)
+#include "ltopology-rankextremestrirandom.h" // RankExtremesTriRandom / ContinueRankExtremesTriRandom:best/better/worst+3排序随机(供 INFO 加权均值)
+#include "ltopology-salpchain.h"            // SalpChain:食物+链上前一只(供 SSA/SalpChainUpdate 链式)
+#include "ltopology-dungbeetlerefs.h"       // DungBeetleRefs:全局最优+当代最优+当代最差(供 DBO/DungBeetleRoles)
 #include "ltopology-clonal.h"
 #include "ltopology-firework.h"
 #include "ltopology-neighborhood.h"

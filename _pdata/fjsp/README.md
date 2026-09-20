@@ -13,7 +13,7 @@
 
 ## 3. 文件格式
 
-ECFlow + Brandimarte 风格纯文本，空白分隔。
+EvoFlow + Brandimarte 风格纯文本，空白分隔。
 
 ### 3.1 头部键（`KEY: value`）
 

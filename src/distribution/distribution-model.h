@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 常用基础分布模型:支持基于样本的建模、更新与取值(采样)。DistributionModel 基类 + DM_Gaussian/DM_Cauchy/DM_Uniform/DM_Histogram。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <vector>
-#include "ecflow-rand.h"    // ECFlow::rand01(), ECFlow::rand01_()
+#include "evoflow-rand.h"    // EvoFlow::rand01(), EvoFlow::rand01_()
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 分布模型的抽象基类
     class DistributionModel
@@ -52,8 +47,8 @@ namespace ECFlow
         double gaussian(double mean = 0, double stdv = 1)
         {
             return mean + stdv * (
-                sqrt((-2) * log(ECFlow::rand01_()))
-                * sin(2 * 3.1415926 * ECFlow::rand01()));
+                sqrt((-2) * log(EvoFlow::rand01_()))
+                * sin(2 * 3.1415926 * EvoFlow::rand01()));
         }
 
     public:
@@ -111,7 +106,7 @@ namespace ECFlow
         // 逆变换采样:x0 + γ·tan(π·(u-0.5)),u∈(0,1) → 参数 ∈(-π/2,π/2),tan 有限
         double cauchy(double location, double scale)
         {
-            return location + scale * tan(3.1415926 * (ECFlow::rand01_() - 0.5));
+            return location + scale * tan(3.1415926 * (EvoFlow::rand01_() - 0.5));
         }
 
     public:
@@ -181,7 +176,7 @@ namespace ECFlow
         double getValue() override
         {
             if (_sample_number == 0 || _max <= _min) return _min;   // 未建模/退化 → min(fresh=0)
-            return ECFlow::rand01() * (_max - _min) + _min;
+            return EvoFlow::rand01() * (_max - _min) + _min;
         }
 
         void setModel(double* paras) override
@@ -238,13 +233,13 @@ namespace ECFlow
         {
             if (_total == 0 || _max <= _min) return _min;   // 未建模/退化 → min(fresh=0)
             // 按频率轮盘选箱
-            int r = int(ECFlow::rand01() * _total);
+            int r = int(EvoFlow::rand01() * _total);
             if (r >= _total) r = _total - 1;
             int b = 0, acc = 0;
             for (; b < _bins; b++) { acc += _counts[b]; if (r < acc) break; }
             if (b >= _bins) b = _bins - 1;
             double w = (_max - _min) / _bins;
-            return _min + (b + ECFlow::rand01()) * w;   // 选中箱内均匀
+            return _min + (b + EvoFlow::rand01()) * w;   // 选中箱内均匀
         }
 
         void setModel(double* paras) override   // [min, max, bins]:建等频均匀直方图(各箱计数=1)

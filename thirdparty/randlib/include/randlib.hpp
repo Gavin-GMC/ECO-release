@@ -1,6 +1,7 @@
 #ifndef RANDOMLIB_H
 #define RANDOMLIB_H
 
+#include <algorithm>
 #include <random>
 #include <chrono>
 #include <stdexcept>
@@ -19,10 +20,11 @@ namespace randomlib {
 
         const auto now = std::chrono::high_resolution_clock::now().time_since_epoch();
         const auto ns_count = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+        const std::uint64_t ns_bits = static_cast<std::uint64_t>(ns_count);
 
         std::vector<typename Gen::result_type> seed_data{
-            static_cast<typename Gen::result_type>(ns_count & 0xFFFFFFFFFFFFFFFF),
-            static_cast<typename Gen::result_type>(ns_count >> 64),
+            static_cast<typename Gen::result_type>(ns_bits & 0xFFFFFFFFULL),
+            static_cast<typename Gen::result_type>((ns_bits >> 32U) & 0xFFFFFFFFULL),
             static_cast<typename Gen::result_type>(std::chrono::system_clock::now().time_since_epoch().count())
         };
 

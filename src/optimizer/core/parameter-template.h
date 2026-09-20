@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 优化器组件的参数模板:机器可读的参数 schema —— 种类、合法范围、是否可空、推荐范围。
 //   主要面向未来"自动算法生成 / 自动调参"(在推荐范围内采样);兼作参数自文档。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
 #include <vector>
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 参数种类:决定自动生成 / 配置如何解释并采样该 double
     enum class ParamKind { Enum, Int, Real };
@@ -32,7 +27,7 @@ namespace ECFlow
     struct ParameterTemplate {
         std::vector<ParamInfo> params;   // 本级参数
 
-        // ---------------- 渐进披露----------------
+        // ---------------- 渐进披露(v1.4.6.7:由 Registry::Entry 移入本结构)----------------
         // 本级之后还有什么 —— schema 由**本级已确定的取值**决定;nullptr = 定长,无下一级。
         //
         // ★ 契约:`my_para` 是**本级切片**(从本级第一个参数起),**不是整个 para**。

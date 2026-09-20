@@ -1,9 +1,12 @@
 // ===========================================================================
 //  out-latex.h  --  LaTeX table writer for the analysis layer
-//  Part of ECFlow (migrated & cleaned in v4 from stable out-latex.h).
+//  Part of EvoFlow (migrated & cleaned in v4 from stable out-latex.h).
 //  Emits a standalone LaTeX document with a booktabs-style / full-grid table.
 //  `bolddata[row]` lists the flat cell indices (o*subcols + metric) to \textbf.
 // ===========================================================================
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
 #include <string>
 #include <fstream>

@@ -1,14 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 二次分配 (Quadratic Assignment Problem) 问题模板。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include"problem.h"
 #include<fstream>
@@ -18,11 +14,11 @@
 #include"logger.hpp"
 #include<iomanip>
 
-namespace ECFlow
+namespace EvoFlow
 {
     // template of Quadratic Assignment Problem
 
-    class PT_QAP
+    class PT_QAP : public ProblemTemplate
     {
     private:
         std::string _name;
@@ -59,7 +55,7 @@ namespace ECFlow
                 for (int i = 0; i < facilities_number; i++)
                 {
                     if (allo[i] < 0)
-                        return ECFLOW_MAX;
+                        return EVOFLOW_MAX;
                 }
 
                 for (int i = 0; i < facilities_number; i++)
@@ -155,7 +151,7 @@ namespace ECFlow
             delete _heuristic;
         }
 
-        void setName(std::string name)
+        void setName(std::string name) override
         {
             _name = name;
         }
@@ -248,7 +244,7 @@ namespace ECFlow
             _distance_matrix = distance_matrix;
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             // 问题定义
             Problem* back = new Problem(_name);
@@ -268,12 +264,12 @@ namespace ECFlow
 
             // 添加约束
             back->addConstrainUnique("allocation", 1e6, "cost"); // 每个位置只能分配一次
-            back->addConstrainRange("allocation", ECFlow::EMPTYVALUE, ECFlow::EMPTYVALUE, 1e6, "cost"); // 只能分配到指定的位置
+            back->addConstrainRange("allocation", EvoFlow::EMPTYVALUE, EvoFlow::EMPTYVALUE, 1e6, "cost"); // 只能分配到指定的位置
 
             return back;
         }
 
-        void save(bool overwrite = false)
+        void save(bool overwrite = false) override
         {
             std::string file_name = "_pdata/qap/" + _name + ".qap";
 
@@ -328,7 +324,7 @@ namespace ECFlow
             sys_logger.info("Saved QAP data to " + file_name);
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             clear();
 
@@ -434,7 +430,7 @@ namespace ECFlow
             }
         }
 
-        void clear()
+        void clear() override
         {
             _name = "qap";
             _facilities_number = 0;
@@ -449,3 +445,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(qap, "QAP", EvoFlow::PT_QAP);

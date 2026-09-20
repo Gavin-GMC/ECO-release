@@ -1,8 +1,10 @@
-﻿#include"ecflow-constant.h"
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include"evoflow-constant.h"
 
 #include"variable.h"
 
-using namespace ECFlow;
+using namespace EvoFlow;
 
 ElementNote::ElementNote()
     : _name("none"),

@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/eval/violation.h
 //
@@ -15,7 +17,7 @@
 #include "cp/compile/program.h"
 #include "cp/domain/variable_domain.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 struct ViolationReport {
     double              total = 0.0;   // 加权总违反
@@ -67,4 +69,4 @@ inline ViolationReport violation(State& st) {
     return rep;
 }
 
-} // namespace ECFlow
+} // namespace EvoFlow

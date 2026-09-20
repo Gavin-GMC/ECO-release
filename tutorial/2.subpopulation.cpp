@@ -1,11 +1,12 @@
-﻿// 2.subpopulation.cpp — 子种群 / workflow 内部结构用例（参照稳定版 2.subpopulation.cpp,适配 v3.12）
 //   在 1.optimizerconfig 的单算子基础上,演示:
 //     ① 多段 workflow —— 一条 workflow 内「交叉段 + 变异段」串联(GA 的组织方式);
 //     ② 子种群访问 —— 装配后经 opt->getSubswarm(id) 拿到 Subpopulation 层对象。
-//   构建: build.ps1 tutorial\2.subpopulation.cpp   输出英文(纪律 6)。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
-#include "ecflow.h"
-using namespace ECFlow;
+#include "evoflow.h"
+using namespace EvoFlow;
 
 static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 

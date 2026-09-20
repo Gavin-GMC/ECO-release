@@ -1,15 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 计算工作流调度 (Computational Workflow Scheduling) 问题模板。
+
 //-------------------------Reference-------------------------
 // 异构 DAG 调度 / HEFT(Topcuoglu et al. 2002, Heterogeneous Earliest-Finish-Time)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -19,14 +17,15 @@
 #include <utility>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_WFS
+    class PT_WFS : public ProblemTemplate
     {
     public:
-        enum class SeqMode { Const, Variable };
+        enum class SeqMode { Const = 0, Variable = 1, Heft = 2, HeftInsert = 3 };
         enum class SeqHeur { UpwardRank, Random };
         enum class MapHeur { Fastest, EFT };       // 映射启发式:最快机器 / HEFT 实时 EFT
         enum class ObjMode { MaxMakespan, AvgMakespan };   // 目标:各工作流完成时间的 最大 / 平均
@@ -64,21 +63,62 @@ namespace ECFlow
             return order;
         }
 
-        // 目标:DAG 主动调度解码器。优先级 var? a[1] : cprio。a[0]=映射 x。
+        // 目标:DAG 调度解码器。Variable 优先级读 a[1],其余模式读 cprio。a[0]=映射 x。
         struct makespanFunc : eccalcul_functor
         {
-            int n, M; bool var, avgMode; int nWf; double pen;
+            int n, M; SeqMode mode; bool avgMode; int nWf; double pen;
             std::vector<double> w, cprio, speed, deadline; std::vector<int> comp;
             std::vector<std::vector<Edge>> pred;
-            makespanFunc(int nn, int m, bool v, double p, std::vector<double> ww, std::vector<std::vector<Edge>> pr,
+
+            static double invalidFitness() noexcept
+            {
+                return std::numeric_limits<double>::max() / 4.0;
+            }
+
+            static bool decodeBoundedIndex(double value, int count, int& decoded) noexcept
+            {
+                if (count <= 0 || !std::isfinite(value) || value < 0.0 || value > double(count - 1))
+                    return false;
+                decoded = static_cast<int>(value + 0.5);
+                return decoded >= 0 && decoded < count;
+            }
+
+            makespanFunc(int nn, int m, SeqMode sm, double p, std::vector<double> ww, std::vector<std::vector<Edge>> pr,
                          std::vector<double> sp, std::vector<double> cp, std::vector<double> dl,
                          bool avg, std::vector<int> cmp, int wf)
-                : n(nn), M(m), var(v), avgMode(avg), nWf(wf), pen(p), w(std::move(ww)), cprio(std::move(cp)),
+                : n(nn), M(m), mode(sm), avgMode(avg), nWf(wf), pen(p), w(std::move(ww)), cprio(std::move(cp)),
                   speed(std::move(sp)), deadline(std::move(dl)), comp(std::move(cmp)), pred(std::move(pr)) {}
             double operator()(double** a) const
             {
+                const bool var = (mode == SeqMode::Variable);
+                const bool insert = (mode == SeqMode::HeftInsert);
+                if (!a || !a[0] || n <= 0 || M <= 0 ||
+                    w.size() < static_cast<size_t>(n) * M ||
+                    speed.size() < static_cast<size_t>(M) * M ||
+                    pred.size() < static_cast<size_t>(n) ||
+                    (!var && cprio.size() < static_cast<size_t>(n)) ||
+                    (var && !a[1]) ||
+                    (!deadline.empty() && deadline.size() < static_cast<size_t>(n)) ||
+                    (avgMode && (nWf <= 0 || comp.size() < static_cast<size_t>(n))))
+                    return invalidFitness();
+
                 const double* x = a[0];
+                std::vector<int> machine(n);
+                for (int i = 0; i < n; ++i)
+                {
+                    if (!decodeBoundedIndex(x[i], M, machine[i]))
+                        return invalidFitness();
+                    if (var && (!std::isfinite(a[1][i]) || a[1][i] < 0.0 || a[1][i] > double(n - 1)))
+                        return invalidFitness();
+                    for (const Edge& e : pred[i])
+                        if (e.first < 0 || e.first >= n) return invalidFitness();
+                    if (avgMode && (comp[i] < 0 || comp[i] >= nWf))
+                        return invalidFitness();
+                }
+
                 std::vector<double> mach(M, 0), fin(n, 0); std::vector<char> done(n, 0);
+                std::vector<std::vector<std::pair<double, double>>> timelines;
+                if (insert) timelines.resize(M);
                 double mk = 0;
                 for (int s = 0; s < n; ++s)
                 {
@@ -91,16 +131,35 @@ namespace ECFlow
                         double pr = var ? a[1][i] : cprio[i];
                         if (best < 0 || pr < bp) { bp = pr; best = i; }         // 升序,平局保留更小任务号
                     }
-                    int i = best, m = static_cast<int>(x[i] + 0.5);
-                    double st = mach[m];
+                    if (best < 0) return invalidFitness();
+                    int i = best, m = machine[i];
+                    double ready = 0;
                     for (const Edge& e : pred[i])                               // 前驱完工 + 通信送达
                     {
-                        int k = e.first, mk2 = static_cast<int>(x[k] + 0.5);
+                        int k = e.first, mk2 = machine[k];
                         double c = (mk2 == m) ? 0.0 : e.second / speed[mk2 * M + m];
-                        double r = fin[k] + c; if (r > st) st = r;
+                        double r = fin[k] + c; if (r > ready) ready = r;
                     }
+                    double st = ready;
+                    if (insert)                                                  // HEFT insertion:找机器时间线最早可容纳空隙
+                    {
+                        double duration = w[i * M + m];
+                        for (const auto& slot : timelines[m])
+                        {
+                            if (st + duration <= slot.first) break;
+                            if (slot.second > st) st = slot.second;
+                        }
+                    }
+                    else if (mach[m] > st) st = mach[m];                         // Const/Heft/Variable:尾部追加
                     double en = st + w[i * M + m];
-                    fin[i] = en; mach[m] = en; done[i] = 1; if (en > mk) mk = en;
+                    fin[i] = en;
+                    if (insert)
+                    {
+                        auto& line = timelines[m];
+                        line.insert(std::lower_bound(line.begin(), line.end(), std::make_pair(st, en)), {st, en});
+                    }
+                    else mach[m] = en;
+                    done[i] = 1; if (en > mk) mk = en;
                 }
                 double obj = mk;                                        // MaxMakespan = 各工作流完成时间的最大 = 总 max
                 if (avgMode && nWf > 0)                                 // AvgMakespan = 各工作流完成时间的平均
@@ -120,6 +179,51 @@ namespace ECFlow
             }
             eccalcul_functor* copy() { return new makespanFunc(*this); }
         };
+
+        // 标准 HEFT upward rank:平均可用机器计算时间 + 平均异机带宽通信时间。
+        // 结果转成“越小越优先”的 cprio,与 makespanFunc 的就绪集选择方向一致。
+        bool buildHeftPriority(const std::vector<double>& w, const std::vector<std::vector<Edge>>& succ,
+                               std::vector<double>& priority) const
+        {
+            if (_M <= 0 || w.size() < static_cast<size_t>(_n) * _M || succ.size() < static_cast<size_t>(_n))
+                return false;
+            double avgBandwidth = 0;
+            if (_M > 1)
+            {
+                int count = 0;
+                if (_speed.size() < static_cast<size_t>(_M) * _M) return false;
+                for (int a = 0; a < _M; ++a) for (int b = 0; b < _M; ++b) if (a != b)
+                {
+                    double rate = _speed[(size_t)a * _M + b];
+                    if (!std::isfinite(rate) || rate <= 0) return false;
+                    avgBandwidth += rate; ++count;
+                }
+                avgBandwidth /= count;
+            }
+            std::vector<double> rank(_n, 0);
+            for (int i = _n - 1; i >= 0; --i)
+            {
+                double avgComp = 0; int eligible = 0;
+                for (int m = 0; m < _M; ++m)
+                {
+                    if (!_mem.empty() && !_memCap.empty() && _memCap[m] < _mem[_perm[i]]) continue;
+                    avgComp += w[(size_t)i * _M + m]; ++eligible;
+                }
+                if (eligible == 0) return false;
+                avgComp /= eligible;
+                double downstream = 0;
+                for (const Edge& e : succ[i])
+                {
+                    double comm = (_M == 1) ? 0.0 : e.second / avgBandwidth;
+                    double value = comm + rank[e.first];
+                    if (value > downstream) downstream = value;
+                }
+                rank[i] = avgComp + downstream;
+            }
+            priority.resize(_n);
+            for (int i = 0; i < _n; ++i) priority[i] = -rank[i];
+            return true;
+        }
 
         // 映射启发式:最快机器(min w[i][m]),非负保序。
         struct mapFunc : eccalcul_functor
@@ -216,7 +320,8 @@ namespace ECFlow
 
     public:
         PT_WFS() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_WFS(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _n; }
         void setPenalty(double p) { _penalty = p; }
         void setSeqMode(SeqMode m) { _seq = m; }
@@ -241,7 +346,8 @@ namespace ECFlow
         // 截止期(可选):deadline[n]。空 = 不启用 deadline 惩罚。
         void setDeadline(std::vector<double> deadline) { _deadline = std::move(deadline); }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/wfs/<name>.wfs。矩阵/向量段带行首 1-based 索引,EDGE_SECTION 无索引;可选段/非默认运行参数按需写出。overwrite=false 不覆盖。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/wfs/" + _name + ".wfs";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("WFS save: file exists (use overwrite): " + path); return; } }
@@ -249,6 +355,13 @@ namespace ECFlow
             if (!out) { sys_logger.error("WFS save: cannot write " + path); return; }
             int E = (int)_eu.size();
             out << "NAME: " << _name << "\nTYPE: WFS\nNODES: " << _n << "\nMACHINES: " << _M << "\nEDGES: " << E << "\n";
+            if (_seq == SeqMode::Variable)        out << "SEQ_MODE: VARIABLE\n";
+            else if (_seq == SeqMode::Heft)       out << "SEQ_MODE: HEFT\n";
+            else if (_seq == SeqMode::HeftInsert) out << "SEQ_MODE: HEFT_INSERT\n";
+            if (_seqHeur == SeqHeur::Random)      out << "SEQ_HEUR: RANDOM\n";
+            if (_mapHeur == MapHeur::EFT)         out << "MAP_HEUR: EFT\n";
+            if (_objMode == ObjMode::AvgMakespan) out << "OBJ_MODE: AVG_MAKESPAN\n";
+            if (_penalty != 0)                    out << "PENALTY: " << _penalty << "\n";
             out << "COMP_SECTION\n";  for (int i = 0; i < _n; ++i) { out << (i + 1); for (int m = 0; m < _M; ++m) out << " " << _w[(size_t)i * _M + m]; out << "\n"; }
             out << "EDGE_SECTION\n";  for (int e = 0; e < E; ++e) out << (_eu[e] + 1) << " " << (_ev[e] + 1) << " " << _ed[e] << "\n";  // 0 基 → 1 基
             out << "SPEED_SECTION\n"; for (int a = 0; a < _M; ++a) { out << (a + 1); for (int b = 0; b < _M; ++b) out << " " << _speed[(size_t)a * _M + b]; out << "\n"; }
@@ -258,7 +371,7 @@ namespace ECFlow
             if ((int)_deadline.size() == _n) { out << "DEADLINE_SECTION\n"; for (int i = 0; i < _n; ++i) out << (i + 1) << " " << _deadline[i] << "\n"; }
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_n == 0) return nullptr;
 
@@ -300,7 +413,7 @@ namespace ECFlow
             if (_seq == SeqMode::Variable)
             {
                 back->addVariable("s", 0, _n - 1, 1, _n);            // 排序优先级(后),允许并列
-                makespanFunc mf(_n, _M, true, pen, w, pred, _speed, {}, deadline, avg, comp, nWf);
+                makespanFunc mf(_n, _M, _seq, pen, w, pred, _speed, {}, deadline, avg, comp, nWf);
                 back->addObjective("makespan", 1, true, "x,s", &mf);
                 if (_seqHeur == SeqHeur::UpwardRank)
                 {
@@ -311,8 +424,15 @@ namespace ECFlow
             }
             else
             {
-                std::vector<double> cprio(_n); for (int i = 0; i < _n; ++i) cprio[i] = i;   // 任务号常量
-                makespanFunc mf(_n, _M, false, pen, w, pred, _speed, std::move(cprio), deadline, avg, comp, nWf);
+                std::vector<double> cprio(_n);
+                if (_seq == SeqMode::Const)
+                    for (int i = 0; i < _n; ++i) cprio[i] = i;        // 任务号常量
+                else if (!buildHeftPriority(w, succ, cprio))
+                {
+                    sys_logger.error("WFS '" + _name + "': HEFT sequence requires valid eligible machines and positive inter-machine bandwidth");
+                    delete back; return nullptr;
+                }
+                makespanFunc mf(_n, _M, _seq, pen, w, pred, _speed, std::move(cprio), deadline, avg, comp, nWf);
                 back->addObjective("makespan", 1, true, "x", &mf);
             }
             // 内存:适用性(mem 按 _perm 重排)
@@ -343,14 +463,17 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "wfs", "wfs"));
             if (!f) { sys_logger.error("WFS instance not found: " + name); return; }
             int n = 0, M = 0, E = -1; std::string tok; bool ok = true;
+            SeqMode seq = SeqMode::Const; SeqHeur seqHeur = SeqHeur::UpwardRank;
+            MapHeur mapHeur = MapHeur::Fastest; ObjMode objMode = ObjMode::MaxMakespan;
+            double penalty = 0;
             std::vector<double> w, ed, speed, mem, memCap, storCap, deadline; std::vector<int> eu, ev;
-            // 统一行号规范:向量/矩阵段每逻辑行以 1-based 索引开头(读入即忽略);EDGE_SECTION 是边表、不加索引。
+            // 统一行号规范(v1.4.9):向量/矩阵段每逻辑行以 1-based 索引开头(读入即忽略);EDGE_SECTION 是边表、不加索引。
             std::string idx;
             auto rdv = [&](std::vector<double>& v, int cnt) { v.assign(cnt, 0); for (int i = 0; i < cnt && ok; ++i) if (!(f >> idx >> v[i])) ok = false; };
             auto rdm = [&](std::vector<double>& v, int rows, int cols) { v.assign((size_t)rows * cols, 0); for (int r = 0; r < rows && ok; ++r) { if (!(f >> idx)) { ok = false; break; } for (int cc = 0; cc < cols && ok; ++cc) if (!(f >> v[(size_t)r * cols + cc])) ok = false; } };
@@ -359,6 +482,40 @@ namespace ECFlow
                 if (tok == "NODES:") f >> n;
                 else if (tok == "MACHINES:") f >> M;
                 else if (tok == "EDGES:") f >> E;
+                else if (tok == "SEQ_MODE:")
+                {
+                    std::string value; if (!(f >> value)) { sys_logger.error("WFS '" + name + "': missing SEQ_MODE value"); return; }
+                    if (value == "CONST") seq = SeqMode::Const;
+                    else if (value == "VARIABLE") seq = SeqMode::Variable;
+                    else if (value == "HEFT") seq = SeqMode::Heft;
+                    else if (value == "HEFT_INSERT") seq = SeqMode::HeftInsert;
+                    else { sys_logger.error("WFS '" + name + "': invalid SEQ_MODE '" + value + "'"); return; }
+                }
+                else if (tok == "SEQ_HEUR:")
+                {
+                    std::string value; if (!(f >> value)) { sys_logger.error("WFS '" + name + "': missing SEQ_HEUR value"); return; }
+                    if (value == "UPWARD_RANK") seqHeur = SeqHeur::UpwardRank;
+                    else if (value == "RANDOM") seqHeur = SeqHeur::Random;
+                    else { sys_logger.error("WFS '" + name + "': invalid SEQ_HEUR '" + value + "'"); return; }
+                }
+                else if (tok == "MAP_HEUR:")
+                {
+                    std::string value; if (!(f >> value)) { sys_logger.error("WFS '" + name + "': missing MAP_HEUR value"); return; }
+                    if (value == "FASTEST") mapHeur = MapHeur::Fastest;
+                    else if (value == "EFT") mapHeur = MapHeur::EFT;
+                    else { sys_logger.error("WFS '" + name + "': invalid MAP_HEUR '" + value + "'"); return; }
+                }
+                else if (tok == "OBJ_MODE:")
+                {
+                    std::string value; if (!(f >> value)) { sys_logger.error("WFS '" + name + "': missing OBJ_MODE value"); return; }
+                    if (value == "MAX_MAKESPAN") objMode = ObjMode::MaxMakespan;
+                    else if (value == "AVG_MAKESPAN") objMode = ObjMode::AvgMakespan;
+                    else { sys_logger.error("WFS '" + name + "': invalid OBJ_MODE '" + value + "'"); return; }
+                }
+                else if (tok == "PENALTY:")
+                {
+                    if (!(f >> penalty) || !std::isfinite(penalty)) { sys_logger.error("WFS '" + name + "': invalid PENALTY value"); return; }
+                }
                 else if (tok == "COMP_SECTION")  { if (n <= 0 || M <= 0) { sys_logger.error("WFS '" + name + "': COMP_SECTION before NODES/MACHINES"); return; } rdm(w, n, M); }
                 else if (tok == "SPEED_SECTION") { if (M <= 0)          { sys_logger.error("WFS '" + name + "': SPEED_SECTION before MACHINES"); return; } rdm(speed, M, M); }
                 else if (tok == "MEM_SECTION")     { if (n <= 0) { sys_logger.error("WFS '" + name + "': MEM_SECTION before NODES"); return; }     rdv(mem, n); }
@@ -383,6 +540,10 @@ namespace ECFlow
             setData(n, M, w, eu, ev, ed, speed);
             if (!mem.empty() || !storCap.empty()) setResources(mem, memCap, storCap);   // 资源段可选
             if (!deadline.empty()) setDeadline(deadline);                                // 截止期段可选
+            _seq = seq; _seqHeur = seqHeur; _mapHeur = mapHeur; _objMode = objMode; _penalty = penalty;
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(wfs, "WFS", EvoFlow::PT_WFS);

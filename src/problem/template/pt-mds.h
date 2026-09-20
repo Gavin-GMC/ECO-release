@@ -1,13 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 最小支配集 (Minimum Dominating Set) 问题模板。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -17,9 +14,9 @@
 #include <algorithm>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_MDS
+    class PT_MDS : public ProblemTemplate
     {
     private:
         std::string      _name = "mds";
@@ -53,14 +50,16 @@ namespace ECFlow
 
     public:
         PT_MDS() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_MDS(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _n; }
         void setPenalty(double p) { _penalty = p; }
         const std::vector<int>& getPermutation() const { return _perm; }
 
         void setGraph(int n, const std::vector<int>& edges) { _n = n; _edges = edges; }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):把当前实例回写为 EvoFlow 格式 _pdata/mds/<name>.mds(overwrite=false 时不覆盖已存在文件)。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/mds/" + _name + ".mds";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("MDS save: file exists (use overwrite): " + path); return; } }
@@ -71,7 +70,7 @@ namespace ECFlow
             for (int k = 0; k < m; ++k) out << (_edges[2 * k] + 1) << " " << (_edges[2 * k + 1] + 1) << "\n";  // 存 0 基 → 回写 1 基
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_n == 0) return nullptr;
             // 度降序预排序(高度先) → 新序→原 的 _perm
@@ -104,7 +103,7 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "mds", "mds"));
@@ -132,3 +131,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(mds, "MDS", EvoFlow::PT_MDS);

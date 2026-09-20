@@ -1,6 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 //   → config/<name>.cfg(ConfigBuilder::saveConfig),并 save→load round-trip 无损 + AssertMatcher 静态自检。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #include <cstdio>
 #include <string>
@@ -8,11 +9,11 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
-#include "ecflow.h"
+#include "evoflow.h"
 #include "config-setter.h"
 #include "config-codec.h"
 #include "assert-matcher.h"
-using namespace ECFlow;
+using namespace EvoFlow;
 
 static const std::string OUTDIR = "config";
 static const int MAXFES = 100000;

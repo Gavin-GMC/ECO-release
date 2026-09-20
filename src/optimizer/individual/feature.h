@@ -1,9 +1,8 @@
 //------------------------Description------------------------
 // 个体特性组件 Feature(INDIV-COMPOSE,收尾 #2):个体的逐个体状态由"逐子类继承"改为
 // "特性组件挂载"。Feature = 一件可挂到 Individual 特性袋里的状态载体(值语义,自带深拷贝/定尺/初始化)。
-//-------------------------Reference-------------------------
-// 新增。取代 individual-{pbest,particle,step,whale,firework}.h 的子类特性成员。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -13,13 +12,13 @@
 #include "solution.h"
 #include "module-type.h"
 #include "parameter-template.h"
-#include "ecflow-assert.h"
+#include "evoflow-assert.h"
 #include "registry.h"
 #include "comparer.hpp"        // PbestFeature::afterEvaluate 用 Comparer::isBetter(单向依赖,无环)
 #include "problem-handle.h"    // RandomInDomain 初始化用 handle 取域边界(getVariableLow/Upbound)
-#include "ecflow-rand.h"         // RandomInDomain 均匀采样
+#include "evoflow-rand.h"         // RandomInDomain 均匀采样
 
-namespace ECFlow
+namespace EvoFlow
 {
 
     // 特性作用域(决定装配期身份键的解析方式,见 docs/个体重构方案.md §4)。
@@ -203,7 +202,7 @@ namespace ECFlow
             [](const double*) -> Feature* { return new VectorFeature(); },   // 初始化策略经 setInitPolicy 戳入,非构造参数
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_vector, Feature, vectorFeatureEntry());
+    EVOFLOW_REGISTER(feat_vector, Feature, vectorFeatureEntry());
 
     inline Registry<Feature>::Entry scalarFeatureEntry()
     {
@@ -211,7 +210,7 @@ namespace ECFlow
             [](const double* p) -> Feature* { return new ScalarFeature(p ? (int)p[0] : 1); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_scalar, Feature, scalarFeatureEntry());
+    EVOFLOW_REGISTER(feat_scalar, Feature, scalarFeatureEntry());
 
     inline Registry<Feature>::Entry solutionFeatureEntry()
     {
@@ -219,7 +218,7 @@ namespace ECFlow
             [](const double*) -> Feature* { return new SolutionFeature(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_solution, Feature, solutionFeatureEntry());
+    EVOFLOW_REGISTER(feat_solution, Feature, solutionFeatureEntry());
 
     inline Registry<Feature>::Entry pbestFeatureEntry()
     {
@@ -227,7 +226,7 @@ namespace ECFlow
             [](const double*) -> Feature* { return new PbestFeature(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_pbest, Feature, pbestFeatureEntry());
+    EVOFLOW_REGISTER(feat_pbest, Feature, pbestFeatureEntry());
 
     inline Registry<Feature>::Entry ageFeatureEntry()
     {
@@ -235,7 +234,7 @@ namespace ECFlow
             [](const double*) -> Feature* { return new AgeFeature(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_age, Feature, ageFeatureEntry());
+    EVOFLOW_REGISTER(feat_age, Feature, ageFeatureEntry());
 
     inline Registry<Feature>::Entry kinshipFeatureEntry()
     {
@@ -243,5 +242,5 @@ namespace ECFlow
             [](const double*) -> Feature* { return new KinshipFeature(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_kinship, Feature, kinshipFeatureEntry());
+    EVOFLOW_REGISTER(feat_kinship, Feature, kinshipFeatureEntry());
 }

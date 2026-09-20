@@ -1,0 +1,14 @@
+NAME: sample
+TYPE: QAP
+COMMENT: EvoFlow-owned 3-facility example used by the minimal release package
+FACILITIES: 3
+LOCATIONS: 3
+FLOW_SECTION
+1 0 5 2
+2 5 0 3
+3 2 3 0
+Distance_SECTION
+1 0 2 3
+2 2 0 1
+3 3 1 0
+EOF

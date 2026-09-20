@@ -1,54 +1,74 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // ConstrainDefine:问题约束域的定义切片(原单体 Problem 的约束部分)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include <memory>
 #include <stdexcept>
-#include "ecflow-constrain.h"
-#include "ecflow-domain.h"
-#include "ecflow-cardinality.h"
-#include "ecflow-accumulate.h"
-#include "ecflow-graph-constrain.h"
+#include "evoflow-constrain.h"
+#include "evoflow-domain.h"
+#include "evoflow-cardinality.h"
+#include "evoflow-accumulate.h"
+#include "evoflow-graph-constrain.h"
 #include "variable.h"
-#include "ecflow-basicfunc.h"   // stringSplit
-#include "ecflow-constant.h"    // EMPTYVALUE
+#include "evoflow-basicfunc.h"   // stringSplit
+#include "evoflow-constant.h"    // EMPTYVALUE
 #include "constraint-manager.h"
 #include "variable-manager.h"
 #include "objective-manager.h"
+#include "problem-info.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    enum class ConstrainKind {
-        user, range, compatibility, eligible, capacity,
-        unique, distinct_cap, distributed, mindistance, expression, accumulate, graph, node_sum, connectivity
-    };
-
-    // 图约束子类型（compile 时按变量长度构造对应类）：族 I 成对边 + 族 II 节点聚合(顶点 0/1)。
-    enum class GraphConstrainKind { independent, distinct, clique, conflict, dominating, vertex_cover };
+    // v2.4.5（CONSTRAINT-SUBTYPE-MODEL）：原 ConstrainKind + GraphConstrainKind +
+    //   AccumulateConstrainKind 三枚举已收敛为 evoflow-constrain.h 的单一 ConstrainType，
+    //   每个具体约束经 virtual type() 自报。此处只留 type → 展示名 的映射（describe 用）。
+    //   ★ 返回串与旧 describe 标签一一对应，是行为保持的锚点。
+    inline const char* constrainTypeName(ConstrainType t)
+    {
+        switch (t)
+        {
+        case ConstrainType::range:               return "range";
+        case ConstrainType::compatibility:       return "compatibility";
+        case ConstrainType::eligible:            return "eligible";
+        case ConstrainType::capacity:            return "capacity";
+        case ConstrainType::unique:              return "unique";
+        case ConstrainType::distinct_cap:        return "distinct_cap";
+        case ConstrainType::distributed:         return "distributed";
+        case ConstrainType::min_distance:        return "min_distance";
+        case ConstrainType::user_defined:        return "user_defined";
+        case ConstrainType::expression:          return "expression";
+        case ConstrainType::sequence_accumulate: return "sequence_accumulate";
+        case ConstrainType::schedule_accumulate: return "schedule_accumulate";
+        case ConstrainType::accumulate:          return "accumulate";
+        case ConstrainType::graph_independent:   return "graph_independent";
+        case ConstrainType::graph_distinct:      return "graph_distinct";
+        case ConstrainType::graph_clique:        return "graph_clique";
+        case ConstrainType::graph_conflict:      return "graph_conflict";
+        case ConstrainType::graph_dominating:    return "graph_dominating";
+        case ConstrainType::graph_vertex_cover:  return "graph_vertex_cover";
+        case ConstrainType::node_sum:            return "node_sum";
+        case ConstrainType::connectivity:        return "connectivity";
+        }
+        return "unknown";
+    }
 
     class ConstrainDefine
     {
     private:
         struct Spec
         {
-            ConstrainKind kind = ConstrainKind::range;
+            ConstrainType type = ConstrainType::range;   // v2.4.5:单一子类型标识(取代 kind+graph_kind+accumulate_kind)
             double penalty = 1.0;
             std::vector<std::string> related_variables;
             std::vector<std::string> related_objects;
             std::vector<std::vector<double>> params;
             std::vector<long long> addresses;
             std::string formula;
-            std::shared_ptr<Constrain> pre_built;   // accumulate
-            GraphConstrainKind graph_kind = GraphConstrainKind::independent;  // kind==graph
+            std::shared_ptr<Constrain> pre_built;   // 急构造约束(accumulate 族);其 type() 即本 Spec 的 type
             std::vector<int>   graph_edges;          // 扁平 0 基边列表 [u0,v0,...]（graph / node_sum 共用）
             bool (*graph_conflict)(double, double) = nullptr;                 // conflict 谓词
             int                ns_nv = 0;            // node_sum: 顶点数
@@ -64,12 +84,12 @@ namespace ECFlow
 
         // 图约束只存边 + 子类型(+ conflict 谓词);n 与具体类在 compile() 时由变量长度推导。
         void _pushGraphSpec(const std::string& input_var, const std::string& objs,
-                            GraphConstrainKind gk, const std::vector<int>& edges,
+                            ConstrainType t, const std::vector<int>& edges,
                             bool (*conflict)(double, double), double penalty_w)
         {
-            Spec d; d.kind = ConstrainKind::graph; d.penalty = penalty_w;
+            Spec d; d.type = t; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
-            d.graph_kind = gk; d.graph_edges = edges; d.graph_conflict = conflict;
+            d.graph_edges = edges; d.graph_conflict = conflict;
             _specs.push_back(std::move(d));
         }
 
@@ -79,7 +99,7 @@ namespace ECFlow
         void addConstrain(const std::string& input_elements, void (*ini)(), double (*chk)(int,double),
                           void (*chg)(int,double), double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::user; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::user_defined; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.addresses = { reinterpret_cast<long long>(ini), reinterpret_cast<long long>(chk), reinterpret_cast<long long>(chg) };
             _specs.push_back(std::move(d));
@@ -87,17 +107,17 @@ namespace ECFlow
         void addConstrainRange(const std::string& input_elements, double left = EMPTYVALUE, double right = EMPTYVALUE,
                                double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::range; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::range; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.params = { { left, right } }; _specs.push_back(std::move(d));
         }
 
         // 该变量是否已注册过 range 约束。供 Problem::compile() 的**域进约束**查重:用户已为某变量声明 range 时
-        //   不再自动补,否则两条 range 会**同时计入 constraintViolation** → 同一处越界被算两遍。
+        //   不再自动补,否则两条 range 会**同时计入 constraintViolation** → 同一处越界被算两遍(v1.4.6.5 修)。
         bool hasRangeConstrain(const std::string& variable_name) const
         {
             for (const Spec& d : _specs)
-                if (d.kind == ConstrainKind::range)
+                if (d.type == ConstrainType::range)
                     for (const std::string& v : d.related_variables)
                         if (v == variable_name) return true;
             return false;
@@ -105,7 +125,7 @@ namespace ECFlow
         void addConstrainCompatibility(const std::string& input_elements, const double* value, int length,
                                        double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::compatibility; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::compatibility; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             std::vector<double> b; b.reserve(length + 1); b.push_back((double)length);
             for (int i = 0; i < length; i++) b.push_back(value[i]);
@@ -115,38 +135,38 @@ namespace ECFlow
         void addConstrainEligible(const std::string& input_elements, std::vector<std::vector<double>> allowed,
                                   double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::eligible; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::eligible; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.params = std::move(allowed); _specs.push_back(std::move(d));
         }
         void addConstrainUnique(const std::string& input_elements, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::unique; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::unique; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs); _specs.push_back(std::move(d));
         }
         // 至多 p 个不同值(选址层):|不同值| ≤ p,满 p 后域收缩到已现集合。
         void addConstrainDistinctCap(const std::string& input_elements, int p, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::distinct_cap; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::distinct_cap; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.params = { { static_cast<double>(p) } }; _specs.push_back(std::move(d));
         }
         void addConstrainMinDistance(const std::string& input_elements, double gap_width, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::mindistance; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::min_distance; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.params = { { 0.0, gap_width } }; _specs.push_back(std::move(d));
         }
         void addConstrainMinDistance(const std::string& input_elements, double* gap_width, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::mindistance; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::min_distance; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             d.params = { { 1.0 } }; d.addresses = { reinterpret_cast<long long>(gap_width) }; _specs.push_back(std::move(d));
         }
         void addConstrainCapacity(const std::string& input_elements, double* caps, int nC, double* vols, int nI,
                                   double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::capacity; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::capacity; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             std::vector<double> a; a.reserve(nC + 1); a.push_back((double)nC); for (int i = 0; i < nC; i++) a.push_back(caps[i]);
             std::vector<double> b; b.reserve(nI + 1); b.push_back((double)nI); for (int i = 0; i < nI; i++) b.push_back(vols[i]);
@@ -155,7 +175,7 @@ namespace ECFlow
         void addConstrainDistributed(const std::string& input_elements, double* vals, int size, int* nums,
                                      double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::distributed; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::distributed; d.penalty = penalty_w;
             d.related_variables = _split(input_elements); d.related_objects = _split(objs);
             std::vector<double> a; a.reserve(size + 1); a.push_back((double)size); for (int i = 0; i < size; i++) a.push_back(vals[i]);
             std::vector<double> c; c.reserve(size); for (int i = 0; i < size; i++) c.push_back((double)nums[i]);
@@ -164,7 +184,7 @@ namespace ECFlow
         void addConstrainExpr(const std::string& input_var, const std::string& input_elements, const std::string& formula,
                               double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::expression; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::expression; d.penalty = penalty_w;
             d.related_variables = _split(input_elements.empty() ? input_var : (input_var + "," + input_elements));
             d.related_objects = _split(objs); d.formula = formula; _specs.push_back(std::move(d));
         }
@@ -172,9 +192,10 @@ namespace ECFlow
                                             double lower, double upper, double init = 0.0,
                                             double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::accumulate; d.penalty = penalty_w;
+            Spec d; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
             d.pre_built = std::make_shared<ConstrainSequenceAccumulate>(penalty_w, std::move(delta), lower, upper, init);
+            d.type = d.pre_built->type();   // 急构造:身份从对象自报(消除原 accumulate_kind 冗余)
             _specs.push_back(std::move(d));
         }
         void addConstrainScheduleAccumulate(const std::string& input_var, int node_count,
@@ -182,17 +203,20 @@ namespace ECFlow
                                             CommModel comm, std::vector<double> deadline,
                                             double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::accumulate; d.penalty = penalty_w;
+            Spec d; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
             d.pre_built = std::make_shared<ConstrainScheduleAccumulate>(penalty_w, node_count, std::move(pred), std::move(exec), std::move(comm), std::move(deadline));
+            d.type = d.pre_built->type();   // 急构造:身份从对象自报
             _specs.push_back(std::move(d));
         }
         ConstrainAccumulate* addConstrainAccumulate(const std::string& input_var, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::accumulate; d.penalty = penalty_w;
+            Spec d; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
             auto c = std::make_shared<ConstrainAccumulate>(penalty_w);
-            ConstrainAccumulate* raw = c.get(); d.pre_built = std::move(c);
+            ConstrainAccumulate* raw = c.get();
+            d.type = c->type();   // 急构造:身份从对象自报
+            d.pre_built = std::move(c);
             _specs.push_back(std::move(d)); return raw;
         }
 
@@ -201,28 +225,28 @@ namespace ECFlow
         // 并校验所有边端点 ∈ [0,n)（见 compile / checkCompleteness）。
         void addConstrainGraphIndependent(const std::string& input_var, const std::vector<int>& edges,
                                           double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::independent, edges, nullptr, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_independent, edges, nullptr, penalty_w); }
 
         void addConstrainGraphDistinct(const std::string& input_var, const std::vector<int>& edges,
                                        double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::distinct, edges, nullptr, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_distinct, edges, nullptr, penalty_w); }
 
         void addConstrainGraphClique(const std::string& input_var, const std::vector<int>& edges,
                                      double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::clique, edges, nullptr, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_clique, edges, nullptr, penalty_w); }
 
         void addConstrainGraphConflict(const std::string& input_var, const std::vector<int>& edges,
                                        bool (*conflict)(double, double), double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::conflict, edges, conflict, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_conflict, edges, conflict, penalty_w); }
 
         // 族 II（节点聚合，顶点 0/1 变量）
         void addConstrainGraphDominating(const std::string& input_var, const std::vector<int>& edges,
                                          double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::dominating, edges, nullptr, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_dominating, edges, nullptr, penalty_w); }
 
         void addConstrainGraphVertexCover(const std::string& input_var, const std::vector<int>& edges,
                                           double penalty_w = 1, const std::string& objs = "")
-        { _pushGraphSpec(input_var, objs, GraphConstrainKind::vertex_cover, edges, nullptr, penalty_w); }
+        { _pushGraphSpec(input_var, objs, ConstrainType::graph_vertex_cover, edges, nullptr, penalty_w); }
 
         // NodeSum（族 II 整合：匹配/度/流）。input_var 为**边变量**(长度=边数)；
         // edges 扁平 [tail,head]；directed=false 计数(无向)、true 有向(尾-1/头+1)；
@@ -231,7 +255,7 @@ namespace ECFlow
                                  bool directed, const std::vector<double>& lo, const std::vector<double>& hi,
                                  const std::vector<double>& cap, double penalty_w = 1, const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::node_sum; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::node_sum; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
             d.graph_edges = edges; d.ns_nv = n_vertices; d.ns_directed = directed;
             d.ns_lo = lo; d.ns_hi = hi; d.ns_cap = cap;
@@ -244,7 +268,7 @@ namespace ECFlow
                                            const std::vector<int>& terminals = {}, double penalty_w = 1,
                                            const std::string& objs = "")
         {
-            Spec d; d.kind = ConstrainKind::connectivity; d.penalty = penalty_w;
+            Spec d; d.type = ConstrainType::connectivity; d.penalty = penalty_w;
             d.related_variables = _split(input_var); d.related_objects = _split(objs);
             d.graph_edges = edges; d.ns_nv = n_vertices; d.conn_terminals = terminals;
             _specs.push_back(std::move(d));
@@ -252,12 +276,27 @@ namespace ECFlow
 
         void clear() { _specs.clear(); _no_check = false; }   // reset specs + own flags
         int getConstraintNumber() const { return static_cast<int>(_specs.size()); }
+        std::vector<ProblemConstraintInfo> describeConstraints() const
+        {
+            std::vector<ProblemConstraintInfo> out;
+            out.reserve(_specs.size());
+            for (const Spec& s : _specs)
+            {
+                ProblemConstraintInfo c;
+                c.variables = s.related_variables;
+                c.penalty = s.penalty;
+                c.objectives = s.related_objects;
+                c.type = constrainTypeName(s.type);   // v2.4.5:单一映射(取代原 kind + 两层子类型 switch)
+                out.push_back(std::move(c));
+            }
+            return out;
+        }
 
         bool checkCompleteness(const VariableManager& var, const ObjectiveManager& obj) const
         {
             for (const auto& d : _specs)
             {
-                if (d.related_variables.size() != 1 && d.kind != ConstrainKind::expression) return false;
+                if (d.related_variables.size() != 1 && d.type != ConstrainType::expression) return false;
                 for (const auto& vn : d.related_variables) if (var.getVariableId(vn) < 0) return false;
                 for (const auto& on : d.related_objects)
                 {
@@ -302,17 +341,17 @@ namespace ECFlow
                 const Spec& d = _specs[cid];
                 Constrain* c = nullptr;
                 if (d.pre_built) c = d.pre_built->clone();
-                else switch (d.kind)
+                else switch (d.type)
                 {
-                case ConstrainKind::user:
+                case ConstrainType::user_defined:
                     c = new ConstrainUserDefined(d.penalty,
                         reinterpret_cast<void(*)()>(d.addresses[0]),
                         reinterpret_cast<double(*)(int,double)>(d.addresses[1]),
                         reinterpret_cast<void(*)(int,double)>(d.addresses[2])); break;
-                case ConstrainKind::range:
+                case ConstrainType::range:
                 {
                     // 边界留空(EMPTYVALUE)→ 编译时自动填该变量声明的域。这是 addConstrainRange 的对外契约。
-                    //   判定用 is_empty():原写 `left != left`(NaN 自比较惯用法)——功能正确,
+                    //   判定用 is_empty()(v1.4.6.6):原写 `left != left`(NaN 自比较惯用法)——功能正确,
                     //   但在一个满是 `== EMPTYVALUE` 恒假陷阱的代码库里,一个**长得像笔误的正确写法**本身就是负担,
                     //   且违反 代码规范.md §3「哨兵判定一律 is_empty()」。
                     double left = d.params[0][0], right = d.params[0][1];
@@ -327,14 +366,14 @@ namespace ECFlow
                     }
                     c = new ConstrainRange(d.penalty, left, right); break;
                 }
-                case ConstrainKind::compatibility:
+                case ConstrainType::compatibility:
                     c = new ConstrainCompatibility(d.penalty, d.params[0].data() + 1, (int)d.params[0][0]); break;
-                case ConstrainKind::eligible:
+                case ConstrainType::eligible:
                     c = new ConstrainEligible(d.penalty, d.params); break;   // params[dim] = 允许值
-                case ConstrainKind::capacity:
+                case ConstrainType::capacity:
                     c = new ConstrainCapacity(d.penalty, const_cast<double*>(d.params[0].data() + 1), (int)d.params[0][0],
                                               const_cast<double*>(d.params[1].data() + 1), (int)d.params[1][0]); break;
-                case ConstrainKind::unique:
+                case ConstrainType::unique:
                 {
                     int vid = var.getVariableId(d.related_variables[0]);
                     int dvi = (vid >= 0) ? var.variable_map_index[vid] : -1;
@@ -351,12 +390,12 @@ namespace ECFlow
                     else c = new ConstrainUniqueLarge(d.penalty);
                     break;
                 }
-                case ConstrainKind::distinct_cap:
+                case ConstrainType::distinct_cap:
                     c = new ConstrainDistinctCap(d.penalty, (int)d.params[0][0]); break;
-                case ConstrainKind::distributed:
+                case ConstrainType::distributed:
                     c = new ConstrainDistributed(d.penalty, const_cast<double*>(d.params[0].data() + 1), (int)d.params[0][0],
                                                  const_cast<double*>(d.params[1].data())); break;
-                case ConstrainKind::mindistance:
+                case ConstrainType::min_distance:
                 {
                     int vid = var.getVariableId(d.related_variables[0]);
                     double lo = (vid >= 0) ? var.variables[vid].getLowbound() : 0.0;
@@ -366,9 +405,16 @@ namespace ECFlow
                     else c = new ConstrainMinDistance(d.penalty, lo, hi, d.params[0][1], vl);
                     break;
                 }
-                case ConstrainKind::expression:
+                case ConstrainType::expression:
                     c = new ConstrainExpression(d.penalty, d.formula, nullptr, 0, 1); break;   // formula validated here
-                case ConstrainKind::graph:
+                // 图族 6 型:共享"取顶点数 n + 校验边"的构造前奏,故 6 个 type 落入同一块,
+                //   块内再按 d.type 选具体类(取代原 kind==graph 外层 + graph_kind 内层两级 switch)。
+                case ConstrainType::graph_independent:
+                case ConstrainType::graph_distinct:
+                case ConstrainType::graph_clique:
+                case ConstrainType::graph_conflict:
+                case ConstrainType::graph_dominating:
+                case ConstrainType::graph_vertex_cover:
                 {
                     // 顶点数 n 取自所绑变量长度（不再由调用方传入，故不可能错位）。
                     int gvid = var.getVariableId(d.related_variables[0]);
@@ -384,18 +430,19 @@ namespace ECFlow
                                                         + std::to_string(n) + ")");
                     }
                     const int* ep = d.graph_edges.data();
-                    switch (d.graph_kind)
+                    switch (d.type)
                     {
-                    case GraphConstrainKind::independent: c = new ConstrainGraphIndependent(d.penalty, n, ep, ne); break;
-                    case GraphConstrainKind::distinct:    c = new ConstrainGraphDistinct(d.penalty, n, ep, ne); break;
-                    case GraphConstrainKind::clique:      c = new ConstrainGraphClique(d.penalty, n, ep, ne); break;
-                    case GraphConstrainKind::conflict:    c = new ConstrainGraphConflict(d.penalty, n, ep, ne, d.graph_conflict); break;
-                    case GraphConstrainKind::dominating:  c = new ConstrainGraphDominating(d.penalty, n, ep, ne); break;
-                    case GraphConstrainKind::vertex_cover:c = new ConstrainGraphVertexCover(d.penalty, n, ep, ne); break;
+                    case ConstrainType::graph_independent:  c = new ConstrainGraphIndependent(d.penalty, n, ep, ne); break;
+                    case ConstrainType::graph_distinct:     c = new ConstrainGraphDistinct(d.penalty, n, ep, ne); break;
+                    case ConstrainType::graph_clique:       c = new ConstrainGraphClique(d.penalty, n, ep, ne); break;
+                    case ConstrainType::graph_conflict:     c = new ConstrainGraphConflict(d.penalty, n, ep, ne, d.graph_conflict); break;
+                    case ConstrainType::graph_dominating:   c = new ConstrainGraphDominating(d.penalty, n, ep, ne); break;
+                    case ConstrainType::graph_vertex_cover: c = new ConstrainGraphVertexCover(d.penalty, n, ep, ne); break;
+                    default: break;
                     }
                     break;
                 }
-                case ConstrainKind::node_sum:
+                case ConstrainType::node_sum:
                 {
                     int gvid = var.getVariableId(d.related_variables[0]);
                     if (gvid < 0)
@@ -419,7 +466,7 @@ namespace ECFlow
                                              d.ns_lo, d.ns_hi, d.ns_cap);
                     break;
                 }
-                case ConstrainKind::connectivity:
+                case ConstrainType::connectivity:
                 {
                     int gvid = var.getVariableId(d.related_variables[0]);
                     if (gvid < 0)

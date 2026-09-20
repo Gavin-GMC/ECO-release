@@ -1,14 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 多维多背包 (Multi-dimension Multiple Knapsack Problem) 问题模板。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include"problem.h"
 #include<fstream>
@@ -18,10 +14,10 @@
 #include"logger.hpp"
 #include<iomanip>
 
-namespace ECFlow
+namespace EvoFlow
 {
 	// template of Multi-dimension and Multiple Knapsack Problem
-	class PT_MKP
+	class PT_MKP : public ProblemTemplate
 	{
 	private:
 		std::string _name;
@@ -293,7 +289,7 @@ namespace ECFlow
 			delete _heuristic;
 		}
 
-		void setName(std::string name)
+		void setName(std::string name) override
 		{
 			_name = name;
 		}
@@ -368,7 +364,7 @@ namespace ECFlow
 			_high_value_priori = sorted;
 		}
 
-		Problem* getProblem()
+		Problem* getProblem() override
 		{
 			// 问题定义
 			Problem* back = new Problem(_name);
@@ -387,7 +383,7 @@ namespace ECFlow
 			double* backpack_pointer = backpack_resource;
 			for (int i = 0; i < _resource_number; i++)
 			{
-				backpack_pointer[0] = ECFLOW_MAX; // 默认缺省背包
+				backpack_pointer[0] = EVOFLOW_MAX; // 默认缺省背包
 				backpack_pointer += 1;
 				for (int j = 0; j < _backpack_number; j++)
 				{
@@ -426,7 +422,7 @@ namespace ECFlow
 				backpack_pointer += total_backpack;
 				item_pointer += _item_number;
 			}
-			back->addConstrainRange("x", ECFlow::EMPTYVALUE, ECFlow::EMPTYVALUE, 1e6, "profits"); // 只能分配到指定的背包
+			back->addConstrainRange("x", EvoFlow::EMPTYVALUE, EvoFlow::EMPTYVALUE, 1e6, "profits"); // 只能分配到指定的背包
 
 			// 清理内存
 			delete[] item_occupy;
@@ -435,7 +431,7 @@ namespace ECFlow
 			return back;
 		}
 
-		void save(bool overwrite = false)
+		void save(bool overwrite = false) override
 		{
 			std::string file_name = "_pdata/mkp/" + _name + ".mkp";
 
@@ -488,7 +484,7 @@ namespace ECFlow
 			mkp_file << "EOF";
 		}
 
-		void load(std::string name)
+		void load(std::string name) override
 		{
 			clear();
 
@@ -616,7 +612,7 @@ namespace ECFlow
 			}
 		}
 
-		void clear()
+		void clear() override
 		{
 			_name = "mkp";
 			_resource_number = 0;
@@ -631,3 +627,6 @@ namespace ECFlow
 		}
 	};
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(mkp, "MKP", EvoFlow::PT_MKP);

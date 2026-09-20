@@ -9,7 +9,7 @@
 ## 2. 文件位置与加载
 
 - 路径：`_pdata/qap/<name>.qap`
-- 加载：`PT_QAP::load("<name>")`（例：`load("bur26a")`）；也可传完整/相对路径。
+- 加载：`PT_QAP::load("<name>")`（例：`load("sample")`）；也可传完整/相对路径。
 
 ## 3. 文件格式
 
@@ -36,19 +36,22 @@
 
 ## 4. 样例
 
-标准头（如 `bur26a.qap`）：
+首方最小样例：
 
 ```
-NAME: bur26a
+NAME: sample
 TYPE: QAP
-FACILITIES: 26
-LOCATIONS: 26
+FACILITIES: 3
+LOCATIONS: 3
 FLOW_SECTION
- 1  53 66 66 …
- 2  66 53 66 …
- …
+1 0 5 2
+2 5 0 3
+3 2 3 0
 Distance_SECTION
- …
+1 0 2 3
+2 2 0 1
+3 3 1 0
+EOF
 ```
 
-本目录含多个标准 QAPLIB 实例，可直接 `load("<名>")`。
+公开包只提供上述 EvoFlow 首方样例，不重新分发 QAPLIB。用户可从 QAPLIB 发布方取得原始 `.dat`，再按 [`../../tutorial/external-data/README.md`](../../tutorial/external-data/README.md) 转换。

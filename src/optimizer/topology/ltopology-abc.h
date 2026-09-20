@@ -2,24 +2,16 @@
 // ABC(人工蜂群)学习拓扑。本文件承载 ABC 竖切的拓扑:
 //   RouletteSource —— onlooker(观察蜂):按 fitness 轮盘**有放回**选源作起点(多对一)+ 1 个随机同伴 k≠源作学习对象。
 //   AgeActivation  —— scout(侦察蜂):见 scout 段(老化个体自学重生、未老化空指针透传);本段暂不含。
-//-------------------------Reference-------------------------
-// 新增(ABC 重做,1.4.4.5)。轮盘 fitness→概率归一化(min 化假设 + 防除零护栏)沿用 ltopology-ga.h/Roulette。
-//   与 Roulette(GA 交叉)区别:仅对**起点**轮盘(源被加权多搜),学习对象取**均匀随机同伴**(非轮盘),不做对称对插。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-topology.h"
-#include "ecflow-rand.h"
-#include "ecflow-constant.h"
+#include "evoflow-rand.h"
+#include "evoflow-constant.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // onlooker:fitness 轮盘有放回选源(起点,多对一)+ 1 个随机同伴 k≠源(学习对象)。
     class RouletteSource : public LearningTopology
@@ -51,7 +43,7 @@ namespace ECFlow
             LearningGraph* g = new LearningGraph(n, 1);   // 每条 1 个学习对象(同伴)
 
             // fitness → 选择概率(min 化假设:越小越优,权重越大;防除零护栏,同 Roulette)
-            double mx = -ECFLOW_MAX, mn = ECFLOW_MAX;
+            double mx = -EVOFLOW_MAX, mn = EVOFLOW_MAX;
             for (int i = 0; i < n; i++)
             {
                 double f = (*cs)[i].solution.fitness[0];
@@ -87,7 +79,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { RouletteSource::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { RouletteSource::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_roulettesource, LearningTopology, rouletteSourceTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_roulettesource, LearningTopology, rouletteSourceTopologyEntry());
 
     // scout 年龄拓扑:每个体作起点。老化(age>limit)→ 学习对象=自身(非空)→ 交 Reinitialize 重生;
     //   未老化 → 学习对象=空指针 → generator 契约 copy 进子代、不评估(age 不变、不耗 FES)。配 index(无条件) 位置替换。
@@ -137,5 +129,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { AgeActivation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { AgeActivation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_ageactivation, LearningTopology, ageActivationTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_ageactivation, LearningTopology, ageActivationTopologyEntry());
 }

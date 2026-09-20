@@ -1,20 +1,22 @@
 //------------------------Description------------------------
 // 路径重连 PathRelinking:在「发起解(起点个体)」与「引导解(学习对象)」之间的**路径**上取中间解——
 //   逐维消解二者差异,消解比例由该子代的**随机深度 β** 决定 → 一个子代 = 路径上的一个采样点。
+
 //-------------------------Reference-------------------------
 // Glover, F. "Tabu search and adaptive memory programming — advances, applications and challenges." 1997.
 // Resende, M.G.C., Ribeiro, C.C. (GRASP with path-relinking 系列)。
 // 原文要义:从发起解出发,**逐步**把它变成引导解(每步消解一个差异属性),沿途中间解常含双亲优点,取**路径上最优**。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 路径中间解:差异维按随机深度 β 取引导值,相同维保持。配 RepeatWithBest(k) + kinshipGreedy。
     class PathRelinking : public LearningStrategy
@@ -64,5 +66,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { PathRelinking::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { PathRelinking::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_pathrelinking, LearningStrategy, pathRelinkingEntry());
+    EVOFLOW_REGISTER(lstrat_pathrelinking, LearningStrategy, pathRelinkingEntry());
 }

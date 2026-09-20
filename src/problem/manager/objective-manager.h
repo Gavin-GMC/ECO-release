@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // ObjectiveManager:ObjectiveDefine::compile() 的产物——目标域运行期引擎(原扁平句柄的目标切片)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -15,7 +10,7 @@
 #include "comparer.hpp"    // Comparer
 #include "variable-manager.h"           // VariableManager (for getFitness)
 
-namespace ECFlow
+namespace EvoFlow
 {
     class ObjectiveManager
     {

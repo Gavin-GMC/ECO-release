@@ -1,8 +1,10 @@
-﻿#include "variable.h"
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include "variable.h"
 #include "ExprTree.h"
 
 using namespace mup;
-using namespace ECFlow;
+using namespace EvoFlow;
 
 // =====================================================================
 // 全局变量定义 (g_OperatorArity)

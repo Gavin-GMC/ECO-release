@@ -10,7 +10,7 @@
 
 - 路径：`_pdata/stp/<name>.stp`
 - 加载：`PT_STP::load("<name>")` 读 `_pdata/stp/<name>.stp`（例：`load("sample")`）；也可传完整/相对路径。
-- 注：这是 **ECFlow 自有格式**；真实 SteinLib/DIMACS `.stp`（`SECTION Graph` / `E u v w`）需另写读取器。
+- 注：这是 **EvoFlow 自有格式**；真实 SteinLib/DIMACS `.stp`（`SECTION Graph` / `E u v w`）需另写读取器。
 
 ## 3. 文件格式
 

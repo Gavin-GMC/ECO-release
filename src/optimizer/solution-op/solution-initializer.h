@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 解初始化器:生成初始候选解的不同策略(随机 / 贪心 / 随机-贪心混合 / 分布 / 无)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "problem-handle.h"
 #include "distribution-factory.h"
 #include "solution.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 解初始化器抽象基类
     class SolutionInitializer

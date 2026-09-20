@@ -1,0 +1,73 @@
+{
+    "schema":  "evoflow-data-manifest-v1",
+    "product_version":  "3.0.1.5",
+    "package":  "minimal",
+    "instance_count":  13,
+    "files":  [
+                  {
+                      "path":  "cflp/sample.cflp",
+                      "bytes":  161,
+                      "sha256":  "2889da898b8f79ace62c687d431b8720b8de1387fb1a83a5a6266fce57f1f2f2"
+                  },
+                  {
+                      "path":  "cpmp/sample.cpmp",
+                      "bytes":  169,
+                      "sha256":  "cc301dc19beb12014a5aea2daac1216ad6a0ac53ab5c5ef9148a142e39c62f5f"
+                  },
+                  {
+                      "path":  "cpmp/sample-coord.cpmp",
+                      "bytes":  188,
+                      "sha256":  "e22d0bfef1b701f8ef011601dad7a98942e67895c0a57af0a4d3c606999739aa"
+                  },
+                  {
+                      "path":  "cvrp/sample.cvrp",
+                      "bytes":  133,
+                      "sha256":  "3d3c8f1ce3f1138e04afebf3916c05995b7694ec7b569d918b0bfa5275f4b4c6"
+                  },
+                  {
+                      "path":  "fjsp/sample.fjsp",
+                      "bytes":  90,
+                      "sha256":  "3a1ef77ccf724b6306462e244d3d31d5ce42ba423122d0644ded73e8e6307a35"
+                  },
+                  {
+                      "path":  "mds/sample.mds",
+                      "bytes":  73,
+                      "sha256":  "066fde87bd2abfd4bf495a4fdf447333ed0a911322943b174a1d2f3d67f8d561"
+                  },
+                  {
+                      "path":  "mis/sample.mis",
+                      "bytes":  73,
+                      "sha256":  "db1ddd5d2be912b3970f8de4ddea03530cbdafb9e31c300844ae45fe9d86043a"
+                  },
+                  {
+                      "path":  "mkp/sample.mkp",
+                      "bytes":  243,
+                      "sha256":  "1708864c4e5f09f0ede3d93ff19c0839fc0ca08b8e90af78cbda66981ee48c55"
+                  },
+                  {
+                      "path":  "qap/sample.qap",
+                      "bytes":  210,
+                      "sha256":  "875009190b9c4864f2c8dea7193139862a70167ab123b5bb0eeec1e40ce91b9e"
+                  },
+                  {
+                      "path":  "sr/sample.sr",
+                      "bytes":  104,
+                      "sha256":  "572c96c3ca74c71b0904077299a63fccc9e21fc965fdc661964277320bc76eaf"
+                  },
+                  {
+                      "path":  "stp/sample.stp",
+                      "bytes":  121,
+                      "sha256":  "8a03a7a636fc5987c4d4ea388acfd9472efd9370dd5d848030092c3f5a9998b1"
+                  },
+                  {
+                      "path":  "tsp/sample.tsp",
+                      "bytes":  177,
+                      "sha256":  "09e1445b45e1987a6f558e24f0b7cf8b6918f91d927c260a3b23ef139594d210"
+                  },
+                  {
+                      "path":  "wfs/sample.wfs",
+                      "bytes":  153,
+                      "sha256":  "8211a8b7c1e5609b8b76e40c8821eeb7afe6e1eb85c6794bcf31942bdd3e9790"
+                  }
+              ]
+}

@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/core/interval_set.h
 //
@@ -24,7 +26,7 @@
 #include "cp/core/interval.h"
 #include "cp/core/small_vector.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 template <class Traits = default_scalar_traits, std::size_t InlineN = 8>
 class basic_interval_set {
@@ -295,4 +297,4 @@ public:
 
 using interval_set = basic_interval_set<default_scalar_traits>;
 
-} // namespace ECFlow
+} // namespace EvoFlow

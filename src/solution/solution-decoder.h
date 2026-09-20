@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // This file defines the solution decoder, which provides a
 //  correspondence between the result vector and the variables.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 ���������ƣ���ȷ�ϣ�, All Rights Reserved.
-// You are free to use the ECFlow����ȷ�ϣ� for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference 
-// "δȷ��"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include<string>
 #include<vector>
 
-namespace ECFlow
+namespace EvoFlow
 {
     struct ElementNote;
     class Objective;

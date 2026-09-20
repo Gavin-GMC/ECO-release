@@ -1,9 +1,10 @@
-﻿// 1.optimizerconfig.cpp — 优化器配置与运行用例（参照稳定版 1.optimzerconfig.cpp,改用 v3.12 的 ConfigBuilder fluent API）
 //   演示:用 ConfigBuilder 装配一个 PSO 优化器 → setProblem → exe → 取最优；并说明如何换算子/多轮运行/日志。
-//   构建: build.ps1 tutorial\1.optimizerconfig.cpp   输出英文(纪律 6)。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
-#include "ecflow.h"
-using namespace ECFlow;
+#include "evoflow.h"
+using namespace EvoFlow;
 
 static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 
@@ -24,7 +25,7 @@ int main()
     wf.initializer("Random");                                  // 初始化:域内随机
     wf.topology.pgBest();                                       // 学习拓扑:pbest+gbest(2 学习对象)
     wf.repair.boundary();                                       // 修复:越界夹回域内
-    wf.strategy.velocityDriven(2, 2.0, 0.9, 0.5 * POP / FES);   // 学习策略:PSO(对象数,c,w_ini,w 衰减)
+    wf.strategy.velocityDriven(2, 2.0, 0.9, 0.4);   // 学习策略:PSO(对象数,c,w_ini,w_final)
     wf.generator.orderedConstruct();                           // 生成器:逐维构造
     wf.evaluator.basic();                                       // 评估:逐个真实评估
     wf.selector.index(false);                                  // 选择:PSO 式位置替换(无条件)

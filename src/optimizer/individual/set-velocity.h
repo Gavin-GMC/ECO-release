@@ -1,20 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 集合速度 SetVelocity(每维 × 每候选 的速度矩阵 + 稀疏索引缓存):用于集合式 PSO(SetPSO)的离散/组合速度。
-//-------------------------Reference-------------------------
-// 抽自 individual-setparticle.h(原为 SetParticle 的内嵌类)。INDIV-COMPOSE S4:提为独立类,供 SetVelocityFeature 包裹,
-//   与个体子类解耦(S5 删 SetParticle 后仍在)。零逻辑改,仅去嵌套。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
+#include <cmath>
 #include <vector>
 #include <cstring>
 #include <string>
 #include "solution-decoder.h"   // ElementNote / VariableType
-#include "ecflow-rand.h"          // ECFlow::get_int(消费方 ini 用)
+#include "evoflow-rand.h"          // EvoFlow::get_int(消费方 ini 用)
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 集合速度:每维 × 每候选 的速度矩阵(稀疏索引缓存)
     class SetVelocity
@@ -23,6 +20,12 @@ namespace ECFlow
         static constexpr double threshold = 1e-3;
         double _low_bound;
         double _accuracy;
+
+        bool validIndex(int demensionId, int choiceId) const
+        {
+            return velocity && demensionId >= 0 && demensionId < demension &&
+                   choiceId >= 0 && choiceId < choice;
+        }
 
         SetVelocity()   // 仅供 copy() 使用
         {
@@ -125,7 +128,30 @@ namespace ECFlow
             delete[] velocityIndex_Size;
         }
 
-        int    choice2Cid(double choice_) { return int((choice_ - _low_bound) / _accuracy); }
+        bool tryChoice2Cid(double choice_, int& cid) const
+        {
+            cid = -1;
+            if (!std::isfinite(choice_) || !std::isfinite(_low_bound) ||
+                !std::isfinite(_accuracy) || _accuracy <= 0.0 || choice <= 0)
+                return false;
+
+            const double high = _low_bound + _accuracy * (choice - 1);
+            if (!std::isfinite(high) || choice_ < _low_bound || choice_ > high)
+                return false;
+
+            const double scaled = (choice_ - _low_bound) / _accuracy;
+            if (!std::isfinite(scaled) || scaled < 0.0 || scaled > static_cast<double>(choice - 1))
+                return false;
+
+            cid = static_cast<int>(scaled);
+            return cid >= 0 && cid < choice;
+        }
+
+        int choice2Cid(double choice_)
+        {
+            int cid;
+            return tryChoice2Cid(choice_, cid) ? cid : -1;
+        }
         double cid2Choice(int cid)         { return _low_bound + _accuracy * cid; }
 
         int trans2Did(int demension_, double prechoice)
@@ -143,8 +169,9 @@ namespace ECFlow
 
         void addToVelocity(int demensionId, int choiceid, double rate)
         {
-            if (demensionId >= demension || rate <= velocity[demensionId * choice + choiceid] || choiceid >= choice)
+            if (!validIndex(demensionId, choiceid) || !std::isfinite(rate))
                 return;
+            if (rate <= velocity[demensionId * choice + choiceid]) return;
             if (rate > 1) rate = 1;
 
             velocity[demensionId * choice + choiceid] = rate;
@@ -170,7 +197,10 @@ namespace ECFlow
             }
         }
 
-        double getVelocityRate(int demensionId, int choiceId) { return velocity[demensionId * choice + choiceId]; }
+        double getVelocityRate(int demensionId, int choiceId)
+        {
+            return validIndex(demensionId, choiceId) ? velocity[demensionId * choice + choiceId] : 0.0;
+        }
 
         void clear()
         {

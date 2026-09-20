@@ -1,13 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 面向序列/排列的交叉算子:PartialMapped(PMX)/ Cycle(CX)/ Order(OX)/ SubtourExchange / PositionBased(PBX)。
 //   兼顾"同解内相同变量"与"两解互不具有的变量"两种场景(1对1/1对多/1对0 匹配,见 buildMap 注释)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
@@ -15,14 +10,14 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_map>
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "individual.h"
 #include "problem-handle.h"
 #include "lstrategy-crossover.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 匹配顺序(序列约束不满足时算子本身工作不佳,不过度追求相似性):
     //   ① 学习对象中元素匹配且未交换的基因位;② 对位元素(退回传统点/均匀交叉);③ 随机未匹配元素。
@@ -63,7 +58,7 @@ namespace ECFlow
                     found = true;
                     break;
                 }
-                d = (d + ECFlow::get_int(0, solution_size - 1)) % solution_size;   // 修复:rand()%N
+                d = (d + EvoFlow::get_int(0, solution_size - 1)) % solution_size;   // 修复:rand()%N
             }
         }
         delete[] used;
@@ -105,7 +100,7 @@ namespace ECFlow
                     found = true;
                     break;
                 }
-                d = (d + ECFlow::get_int(0, solution_size - 1)) % solution_size;   // 修复:rand()%N
+                d = (d + EvoFlow::get_int(0, solution_size - 1)) % solution_size;   // 修复:rand()%N
             }
         }
         delete[] used;
@@ -178,8 +173,8 @@ namespace ECFlow
                     offspring1 = new double[_buffer_size];
                     offspring2 = new double[_buffer_size];
                 }
-                begin_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
-                end_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                begin_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
+                end_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
                 if (end_index < begin_index) std::swap(begin_index, end_index);
                 end_index++;
             }
@@ -284,7 +279,7 @@ namespace ECFlow
                     offspring1 = new double[_buffer_size];
                     offspring2 = new double[_buffer_size];
                 }
-                begin_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                begin_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
             }
         }
 
@@ -381,8 +376,8 @@ namespace ECFlow
                     offspring2 = new double[_buffer_size];
                 }
                 // 修复:原误写 `int begin_index=…`(局部遮蔽成员)→ 去 int,赋成员
-                begin_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
-                end_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                begin_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
+                end_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
                 if (end_index < begin_index) std::swap(begin_index, end_index);
                 end_index++;
             }
@@ -480,8 +475,8 @@ namespace ECFlow
                     offspring1 = new double[_buffer_size];
                     offspring2 = new double[_buffer_size];
                 }
-                begin_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
-                end_index = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                begin_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
+                end_index = EvoFlow::get_int(0, s->getSolutionSize() - 1);
                 if (end_index < begin_index) std::swap(begin_index, end_index);
                 end_index++;
             }
@@ -661,9 +656,9 @@ namespace ECFlow
             [](AssertList& L, const double* p) { PositionBasedCrossover::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { PositionBasedCrossover::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_cross_partialmapped,   LearningStrategy, partialMappedCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_cycle,           LearningStrategy, cycleCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_order,           LearningStrategy, orderCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_subtourexchange, LearningStrategy, subtourExchangeCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_positionbased,   LearningStrategy, positionBasedCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_partialmapped,   LearningStrategy, partialMappedCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_cycle,           LearningStrategy, cycleCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_order,           LearningStrategy, orderCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_subtourexchange, LearningStrategy, subtourExchangeCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_positionbased,   LearningStrategy, positionBasedCrossoverEntry());
 }

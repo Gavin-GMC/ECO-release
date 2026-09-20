@@ -1,13 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 学习策略 LearningStrategy:个体如何向学习对象学习、生成子代。定义两条生成路径——
 //   整体生成(getNewIndividual / preparation_i)与逐维构造(preparation_d + nextDecision)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <stdexcept>
@@ -20,7 +15,7 @@
 #include "problem-handle.h"
 #include "parameter-template.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class BestArchive;   // update_s 传全局最优档案(MMAS 经 getElite 取 global-best);前向声明,基类不 include
     class Terminator;    // preparation_s 传运行总进度(GWO/WOA 的系数 a);前向声明,基类不 include

@@ -1,32 +1,27 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 二进制 PSO(BPSO)族学习策略:①BinaryVelocityDriven(标准 sigmoid BPSO:速度更新 + sigmoid 概率取 0/1);
-//   ②StickyBinary(粘性 BPSO:stickiness + 直接翻转概率,取代 velocity+sigmoid,复用 velocity 存 stickiness;见文末)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <algorithm>
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "solution.h"
 #include "individual.h"
 #include "learning-strategy.h"
 #include "registry.h"
+#include "terminator.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class BinaryVelocityDrivenStrategy : public LearningStrategy
     {
     private:
         double _c1, _c2;
-        double _w, _r1, _r2;
-        double _w_attenuation;
+        double _w_ini, _w, _r1, _r2;
+        double _w_final;
         std::string _vel_key;   // INDIV-COMPOSE:velocity 特性身份键(装配期解析,ini 缓存)
 
     public:
@@ -35,18 +30,19 @@ namespace ECFlow
         {
             return { { "velocity", "vector", FeatureScope::Private, {} } };
         }
-        BinaryVelocityDrivenStrategy(double c1 = 2, double c2 = 2, double w_ini = 0.9, double w_attenuation = EMPTYVALUE)
+        BinaryVelocityDrivenStrategy(double c1 = 2, double c2 = 2, double w_ini = 0.9, double w_final = EMPTYVALUE)
             : LearningStrategy()
         {
             _c1 = c1;
             _c2 = c2;
-            _w = w_ini;
-            _w_attenuation = w_attenuation;
+            _w_ini = w_ini;
+            _w = _w_ini;
+            _w_final = w_final;
         }
 
         ~BinaryVelocityDrivenStrategy() {}
 
-        void ini(ProblemHandle*) override { _vel_key = featureKey("velocity"); }   // 缓存 velocity 身份键
+        void ini(ProblemHandle*) override { _w = _w_ini; _vel_key = featureKey("velocity"); }   // 每轮 exe 复位 + 缓存 velocity 身份键
 
         static void preAssert(AssertList& list, double* paras)
         {
@@ -55,12 +51,17 @@ namespace ECFlow
         }
         static void postAssert(AssertList& list, double* paras) { list.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::postAssert)); }
 
-        void preparation_s(IndividualArray& population, Terminator*) override
+        void preparation_s(IndividualArray& population, Terminator* terminator) override
         {
-            if (is_empty(_w_attenuation))    // 未设衰减 → 随机惯性(修复:原 == EMPTYVALUE 恒假)
+            if (is_empty(_w_final))
                 _w = rand01_();
             else
-                _w -= _w_attenuation;        // 修复笔误:原为 `_w -= EMPTYVALUE`(-= NaN)
+            {
+                double progress = terminator ? terminator->getProgress() : 0.0;
+                if (progress < 0.0) progress = 0.0;
+                if (progress > 1.0) progress = 1.0;
+                _w = _w_ini + (_w_final - _w_ini) * progress;
+            }
             _r1 = rand01_();
             _r2 = rand01_();
         }
@@ -89,14 +90,14 @@ namespace ECFlow
             ParameterTemplate{ { {"c1",            ParamKind::Real, 0.0, 10.0, false, 1.5, 2.5},
                                  {"c2",            ParamKind::Real, 0.0, 10.0, false, 1.5, 2.5},
                                  {"w_ini",         ParamKind::Real, 0.0, 1.0,  false, 0.4, 0.9},
-                                 {"w_attenuation", ParamKind::Real, 0.0, 1.0,  true,  0.0, 0.1} } }, sizeof(BinaryVelocityDrivenStrategy),
+                                 {"w_final",       ParamKind::Real, 0.0, 1.0,  true,  0.2, 0.9} } }, sizeof(BinaryVelocityDrivenStrategy),
             [](const double* p) -> LearningStrategy* {
                 return p ? new BinaryVelocityDrivenStrategy(p[0], p[1], p[2], p[3]) : new BinaryVelocityDrivenStrategy();
             },
             [](AssertList& L, const double* p) { BinaryVelocityDrivenStrategy::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { BinaryVelocityDrivenStrategy::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_binaryvelocitydriven, LearningStrategy, binaryVelocityDrivenStrategyEntry());
+    EVOFLOW_REGISTER(lstrat_binaryvelocitydriven, LearningStrategy, binaryVelocityDrivenStrategyEntry());
 
     // ============ Sticky BPSO(粘性二进制 PSO):以粘性 stickiness([0,1] 有界 momentum)+ 直接翻转概率取代 velocity+sigmoid ============
     // Nguyen/Xue/Andreae/Zhang(张孟杰) IEEE TEVC 2020;参照用户实现(参考资料/sbpso/sched_sdl_hpso.h)提炼。3-term 通用版。
@@ -177,5 +178,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { StickyBinary::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { StickyBinary::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_stickybinary, LearningStrategy, stickyBinaryEntry());
+    EVOFLOW_REGISTER(lstrat_stickybinary, LearningStrategy, stickyBinaryEntry());
 }

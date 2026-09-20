@@ -1,18 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 基础评估器 BasicEvaluator:对每个未评估子代直接调用真实评估。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "evaluator.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class BasicEvaluator final : public Evaluator
     {
@@ -45,5 +40,5 @@ namespace ECFlow
             [](const double*) -> Evaluator* { return new BasicEvaluator(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(eval_basic, Evaluator, basicEvaluatorEntry());
+    EVOFLOW_REGISTER(eval_basic, Evaluator, basicEvaluatorEntry());
 }

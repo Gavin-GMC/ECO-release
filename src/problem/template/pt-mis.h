@@ -1,13 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 最大独立集 (Maximum Independent Set) 问题模板。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -17,9 +14,9 @@
 #include <algorithm>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_MIS
+    class PT_MIS : public ProblemTemplate
     {
     private:
         std::string      _name = "mis";
@@ -42,7 +39,8 @@ namespace ECFlow
         PT_MIS() {}
         // functor 由 add* 在 add 时即拷贝(见 CalcSpec),故模板无需持有 functor 成员、传局部即可。
 
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_MIS(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _n; }
         void setPenalty(double p) { _penalty = p; }          // ≤0 → 默认 1e6
         void setDegreeSort(bool on) { _degree_sort = on; }   // 度感知预排序开关(默认开)
@@ -51,7 +49,8 @@ namespace ECFlow
         void setGraph(int n, const int* edges, int num_edges) { _n = n; _edges.assign(edges, edges + 2 * num_edges); }
         void setGraph(int n, const std::vector<int>& edges)   { _n = n; _edges = edges; }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/mis/<name>.mis(overwrite=false 时不覆盖)。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/mis/" + _name + ".mis";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("MIS save: file exists (use overwrite): " + path); return; } }
@@ -62,7 +61,7 @@ namespace ECFlow
             for (int k = 0; k < m; ++k) out << (_edges[2 * k] + 1) << " " << (_edges[2 * k + 1] + 1) << "\n";  // 0 基 → 1 基
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_n == 0) return nullptr;
 
@@ -90,8 +89,8 @@ namespace ECFlow
             return back;
         }
 
-        // 读 ECFlow 标准格式(TSPLIB 风格)：KEY: value 头 + EDGE_SECTION 段(边 1 基)。
-        void load(std::string name)
+        // 读 EvoFlow 标准格式(TSPLIB 风格)：KEY: value 头 + EDGE_SECTION 段(边 1 基)。
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "mis", "mis"));
@@ -110,3 +109,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(mis, "MIS", EvoFlow::PT_MIS);

@@ -1,14 +1,9 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 环境选择 EnvirSelect。**两层设计**:
 //   第一层(selector 子类 / update_subswarm) = **找谁替换**(Index 逐位 / Close 最相似 / Rank 择优归并);
 //   第二层(AcceptCriterion)               = **是否替换**(接受准则:无条件 / 择优爬山 / 退火 Metropolis)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
@@ -16,12 +11,12 @@
 #include <vector>
 #include "individual.h"
 #include "individual-array.h"
-#include "ecflow-rand.h"
-#include "ecflow-assert.h"     // acceptPostAssert 追加接受准则契约(如 age 计龄 → ageMaintained)
+#include "evoflow-rand.h"
+#include "evoflow-assert.h"     // acceptPostAssert 追加接受准则契约(如 age 计龄 → ageMaintained)
 #include "terminator.h"      // update_subswarm 透传 terminator(第二层接受准则签名)
 #include "best-archive.h"    // update_subswarm 透传 archive
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 接受准则枚举(= selector 注册项 para[0])
     enum class AcceptType { Unconditional = 0, Better = 1, Anneal = 2, Aging = 3 };

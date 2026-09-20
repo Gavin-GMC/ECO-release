@@ -12,7 +12,7 @@ namespace MetricLib
      * @param num 待判断的浮点数
      * @return true=无效数，false=有效数
      */
-    bool isInvalid(double num) {
+    inline bool isInvalid(double num) {
         return std::isnan(num) || std::isinf(num);
     }
 
@@ -24,7 +24,7 @@ namespace MetricLib
      * @return 每个元素对应的排名（double类型）
      * @throw std::invalid_argument 如果data为空指针或length<=0
      */
-    std::vector<double> calculateRanks(const double* data, const int length, const bool min_is_better = true) {
+    inline std::vector<double> calculateRanks(const double* data, const int length, const bool min_is_better = true) {
         // 边界检查：空指针或无效长度
         if (data == nullptr) {
             throw std::invalid_argument("calculateRanks(): data is nullptr");

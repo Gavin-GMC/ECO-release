@@ -6,6 +6,7 @@
 #include <vector>      // 关联排序的索引数组、临时存储
 #include <numeric>     // std::iota：快速初始化索引数组
 #include <iterator>    // std::iterator_traits（迭代器值类型推导）
+#include <limits>      // std::numeric_limits：浮点分箱步长下限
 
 // 命名空间封装，避免全局命名污染
 namespace sortlib {

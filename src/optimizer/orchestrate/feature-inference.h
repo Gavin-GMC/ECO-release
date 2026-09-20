@@ -1,9 +1,8 @@
 //------------------------Description------------------------
 // 装配期特性推断引擎(INDIV-COMPOSE S2):扫一条 workflow 的组件需求,推断出个体应挂的特性集,
 // 并把每个组件"role→袋内身份键"的映射戳回该组件,供运行期按 role 取用。
-//-------------------------Reference-------------------------
-// 新增。设计见 docs/个体重构方案.md §4-5。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -15,7 +14,7 @@
 #include "configure-list.h"
 #include "optimize-component.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     namespace FeatureInference
     {

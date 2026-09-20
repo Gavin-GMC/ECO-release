@@ -1,20 +1,15 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // HeuristicManager:HeuristicDefine::compile() 的产物——启发域运行期引擎(原扁平句柄的启发切片)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <cstring>
-#include "ecflow-inspiration.h"   // Inspiration, domain_view
+#include "evoflow-inspiration.h"   // Inspiration, domain_view
 #include "variable-manager.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class HeuristicManager
     {

@@ -1,0 +1,23 @@
+import os
+from typing import Any, Callable, Optional, Union
+
+from .config import Config
+from .problem import CompiledProblem, Problem
+from ._core import RunResult as RunResult, RunRoundResult as RunRoundResult, RunSolution as RunSolution
+
+ProgressCallback = Callable[[int, int], Any]
+CancellationCallback = Callable[[], bool]
+PathInput = Union[str, bytes, os.PathLike]
+ProblemInput = Union[Problem, CompiledProblem]
+
+class Optimizer:
+    def __init__(self, problem: ProblemInput, config: Config, *, tag: Optional[str] = ..., optimizer_name: Optional[str] = ..., max_fes: Optional[int] = ..., max_convergence: Optional[int] = ..., max_time: Optional[int] = ..., verbose: bool = ...) -> None: ...
+    @property
+    def tag(self) -> str: ...
+    @property
+    def optimizer_name(self) -> str: ...
+    def run(self, *, seed: int = ..., runs: int = ..., run_start: Optional[int] = ..., replace_existing: bool = ..., progress: Optional[ProgressCallback] = ..., cancelled: Optional[CancellationCallback] = ...) -> RunResult: ...
+    def continue_run(self, *, max_fes: Optional[int] = ..., max_convergence: Optional[int] = ..., max_time: Optional[int] = ...) -> RunResult: ...
+
+def run(problem: ProblemInput, config: Config, *, seed: int = ..., runs: int = ..., tag: Optional[str] = ..., optimizer_name: Optional[str] = ..., run_start: Optional[int] = ..., replace_existing: bool = ..., max_fes: Optional[int] = ..., max_convergence: Optional[int] = ..., max_time: Optional[int] = ..., verbose: bool = ..., progress: Optional[ProgressCallback] = ..., cancelled: Optional[CancellationCallback] = ...) -> RunResult: ...
+def run_files(problem_path: PathInput, config_path: PathInput, *, problem_name: Optional[str] = ..., optimizer_name: Optional[str] = ..., seed: int = ..., runs: int = ..., tag: Optional[str] = ..., run_start: Optional[int] = ..., replace_existing: bool = ..., max_fes: Optional[int] = ..., max_convergence: Optional[int] = ..., max_time: Optional[int] = ..., verbose: bool = ..., progress: Optional[ProgressCallback] = ..., cancelled: Optional[CancellationCallback] = ...) -> RunResult: ...

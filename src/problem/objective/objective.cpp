@@ -1,7 +1,9 @@
-﻿#include"ecflow-calculator.h"
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include"evoflow-calculator.h"
 #include "objective.h"
 
-using namespace ECFlow;
+using namespace EvoFlow;
 
 // Ĭ�Ϲ��캯������ʼ��Ŀ�����Ĭ������
 Objective::Objective()

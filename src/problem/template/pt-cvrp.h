@@ -1,16 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 带容量车辆路径 (Capacitated Vehicle Routing Problem) 问题模板。
+
 //-------------------------Reference-------------------------
 // Prins C. (2004) A simple and effective evolutionary algorithm for the VRP.
 // Vidal T. (2016) Technical note: Split algorithm in O(n) for the CVRP.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -22,9 +20,9 @@
 #include <cmath>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_CVRP
+    class PT_CVRP : public ProblemTemplate
     {
     public:
         // 切段(拆分)策略：Greedy=贪心顺序切(O(N),给定顺序次优);
@@ -40,6 +38,7 @@ namespace ECFlow
         double              _penalty = 0;
         SplitMode           _split = SplitMode::Optimal;   // 默认最优拆分
         int                 _K = 0;                        // 车辆数上限(0=不限)
+        double              _maxdist = 0;                  // 单车最大路长(DISTANCE;0=不限,仅 Golden 系有,T-CVRP-DIST)
 
         static double dist(double ax, double ay, double bx, double by)
         { double dx = ax - bx, dy = ay - by; return std::sqrt(dx * dx + dy * dy); }
@@ -52,9 +51,9 @@ namespace ECFlow
         struct routeFunc : eccalcul_functor
         {
             static constexpr double INF = 1e18;
-            int N; double Q; int K; std::vector<double> x, y, dem; SplitMode mode;
-            routeFunc(int n, double q, int k, std::vector<double> xs, std::vector<double> ys, std::vector<double> d, SplitMode m)
-                : N(n), Q(q), K(k), x(std::move(xs)), y(std::move(ys)), dem(std::move(d)), mode(m) {}
+            int N; double Q; int K; std::vector<double> x, y, dem; SplitMode mode; double maxdist;
+            routeFunc(int n, double q, int k, std::vector<double> xs, std::vector<double> ys, std::vector<double> d, SplitMode m, double md = 0)
+                : N(n), Q(q), K(k), x(std::move(xs)), y(std::move(ys)), dem(std::move(d)), mode(m), maxdist(md) {}
 
             double C(int u, int v) const { return dist(x[u], y[u], x[v], y[v]); }   // 节点间距
 
@@ -75,12 +74,14 @@ namespace ECFlow
             double greedy(const std::vector<int>& nd) const
             {
                 if (N == 0) return 0.0;
-                double total = 0, load = 0; int prev = 0, routes = 1;
+                double total = 0, load = 0, rdist = 0; int prev = 0, routes = 1;   // rdist=当前路线 depot→...→prev 行程(T-CVRP-DIST)
                 for (int i = 0; i < N; ++i)
                 {
                     int node = nd[i];
-                    if (load + dem[node] > Q + 1e-9) { total += C(prev, 0); prev = 0; load = 0; ++routes; }
-                    total += C(prev, node); prev = node; load += dem[node];
+                    bool capOver  = load + dem[node] > Q + 1e-9;
+                    bool distOver = maxdist > 0 && rdist + C(prev, node) + C(node, 0) > maxdist + 1e-9;   // 加 node 后(含回车场)超路长
+                    if (capOver || distOver) { total += C(prev, 0); prev = 0; load = 0; rdist = 0; ++routes; }
+                    total += C(prev, node); rdist += C(prev, node); prev = node; load += dem[node];
                 }
                 total += C(prev, 0);
                 return (K > 0 && routes > K) ? INF : total;
@@ -103,6 +104,7 @@ namespace ECFlow
                             if (load > Q + 1e-9) break;
                             if (j == i + 1) cost = C(0, node) + C(node, 0);
                             else { int pm = nd[j - 2]; cost += C(pm, node) + C(node, 0) - C(pm, 0); }
+                            if (maxdist > 0 && cost > maxdist + 1e-9) break;   // 路线全程 cost 单调非减(三角不等式)→ 超即断(T-CVRP-DIST)
                             if (d[i] + cost < d[j]) d[j] = d[i] + cost;
                         }
                     }
@@ -121,6 +123,7 @@ namespace ECFlow
                             if (load > Q + 1e-9) break;
                             if (j == i + 1) cost = C(0, node) + C(node, 0);
                             else { int pm = nd[j - 2]; cost += C(pm, node) + C(node, 0) - C(pm, 0); }
+                            if (maxdist > 0 && cost > maxdist + 1e-9) break;   // 同上:路长超即断(T-CVRP-DIST)
                             if (d[k - 1][i] + cost < d[k][j]) d[k][j] = d[k - 1][i] + cost;
                         }
                     }
@@ -133,6 +136,7 @@ namespace ECFlow
             //    K=0 单层 O(N);K>0 按路数分 K 层,每层对上一层做滑窗最小值,O(N·K)。
             double linear(const std::vector<int>& nd) const
             {
+                if (maxdist > 0) return optimal(nd);   // 距离窗口破坏 O(N) 滑窗单调性 → 回退最优拆分(T-CVRP-DIST)
                 std::vector<double> pdem(N + 1, 0), ptour(N + 1, 0);
                 for (int i = 1; i <= N; ++i) pdem[i]  = pdem[i - 1]  + dem[nd[i - 1]];
                 for (int i = 2; i <= N; ++i) ptour[i] = ptour[i - 1] + C(nd[i - 2], nd[i - 1]);
@@ -197,19 +201,23 @@ namespace ECFlow
 
     public:
         PT_CVRP() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_CVRP(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _N; }
         void setPenalty(double p) { _penalty = p; }
         void setSplitMode(SplitMode m) { _split = m; }       // 切换切段策略(默认 Optimal)
         SplitMode getSplitMode() const { return _split; }
         void setVehicles(int k) { _K = k; }                  // 车辆数上限(0=不限,默认)
         int  getVehicles() const { return _K; }
+        void setMaxRouteDistance(double d) { _maxdist = d; } // 单车最大路长(0=不限;DVRP,T-CVRP-DIST)
+        double getMaxRouteDistance() const { return _maxdist; }
 
         // 内存注入：N 客户;coords/dem 长度 N+1(下标 0=车场);容量 Q。
         void setData(int N, std::vector<double> xs, std::vector<double> ys, std::vector<double> dem, double Q)
         { _N = N; _x = std::move(xs); _y = std::move(ys); _dem = std::move(dem); _Q = Q; }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/cvrp/<name>.cvrp(坐标/需求段每行 `id ...`)。overwrite=false 不覆盖。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/cvrp/" + _name + ".cvrp";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("CVRP save: file exists (use overwrite): " + path); return; } }
@@ -217,17 +225,18 @@ namespace ECFlow
             if (!out) { sys_logger.error("CVRP save: cannot write " + path); return; }
             out << "NAME: " << _name << "\nTYPE: CVRP\nDIMENSION: " << (_N + 1) << "\nCAPACITY: " << _Q << "\n";
             if (_K > 0) out << "VEHICLES: " << _K << "\n";
+            if (_maxdist > 0) out << "DISTANCE: " << _maxdist << "\n";   // 单车最大路长(T-CVRP-DIST)
             out << "NODE_COORD_SECTION\n"; for (int i = 0; i <= _N; ++i) out << (i + 1) << " " << _x[i] << " " << _y[i] << "\n";  // 节点 1=车场
             out << "DEMAND_SECTION\n";     for (int i = 0; i <= _N; ++i) out << (i + 1) << " " << _dem[i] << "\n";
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_N == 0) return nullptr;
             Problem* back = new Problem(_name);
             back->addVariable("x", 0, _N - 1, 1, _N, 1, VariableType::sequence_bidiagraph);   // 客户排列
             double pen = (_penalty > 0) ? _penalty : 1e6;
-            routeFunc rf(_N, _Q, _K, _x, _y, _dem, _split);
+            routeFunc rf(_N, _Q, _K, _x, _y, _dem, _split, _maxdist);
             back->addObjective("dist", 1, true, "x", &rf);                                    // 最小化总距离(K 受限划分)
             back->addConstrainUnique("x", pen, "dist");   // 每客户恰一次:constrains_variable(构造期删已用值)+ violation 兜底
             nnFunc nf(_N, _x, _y);
@@ -235,18 +244,19 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "cvrp", "cvrp"));
             if (!f) { sys_logger.error("CVRP instance not found: " + name); return; }
-            int dim = 0, K = 0; double Q = 0; std::string tok;
+            int dim = 0, K = 0; double Q = 0, D = 0; std::string tok;
             std::vector<double> xs, ys, dem;
             while (f >> tok)
             {
                 if (tok == "DIMENSION:") f >> dim;
                 else if (tok == "CAPACITY:") f >> Q;
                 else if (tok == "VEHICLES:") f >> K;
+                else if (tok == "DISTANCE:") f >> D;             // 单车最大路长(DVRP,Golden 系;T-CVRP-DIST)
                 else if (tok == "NODE_COORD_SECTION")
                 { xs.assign(dim, 0); ys.assign(dim, 0); for (int i = 0; i < dim; ++i) { int id; double a, b; f >> id >> a >> b; xs[id - 1] = a; ys[id - 1] = b; } }
                 else if (tok == "DEMAND_SECTION")
@@ -254,7 +264,11 @@ namespace ECFlow
                 else if (!tok.empty() && tok.back() == ':') { std::string rest; std::getline(f, rest); }
             }
             setData(dim - 1, xs, ys, dem, Q);   // 客户数 = dim-1(去车场)
+            setMaxRouteDistance(D);             // DISTANCE 可选(缺省 0=不限)
             setVehicles(K);                     // VEHICLES 可选(缺省 0=不限)
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(cvrp, "CVRP", EvoFlow::PT_CVRP);

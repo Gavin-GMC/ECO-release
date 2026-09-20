@@ -1,15 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 排名学习拓扑 TopRanked:每代按 comparer(operator<,方向感知)对当代种群排序,取前 K 名
 //   作为**全体个体共享**的学习对象(所有起点指向同一组 K 个终点)。K 任意,通用组件。
-//-------------------------Reference-------------------------
-// 无特定文献:通用"前 K 名"排名选择,供 GWO(K=3,α/β/δ)等多向导类策略复用。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -17,7 +10,7 @@
 #include "learning-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class TopRanked : public LearningTopology
     {
@@ -85,7 +78,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { TopRanked::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { TopRanked::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_topranked, LearningTopology, topRankedEntry());
+    EVOFLOW_REGISTER(ltopo_topranked, LearningTopology, topRankedEntry());
 
     // 两端拓扑:每代取当代种群的**最优**与**最差**(按 comparer 的 operator<,方向感知)作为全体共享的学习对象——
     //   end[0]=best、end[1]=worst;起点=每个体自身。objects=2。与 TopRanked(只给"前 K 名")互补:此处需要"最差"这一端。
@@ -136,7 +129,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { BestAndWorst::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { BestAndWorst::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_bestandworst, LearningTopology, bestAndWorstTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_bestandworst, LearningTopology, bestAndWorstTopologyEntry());
 
     // 每个体重复 k 次作起点(k 次采样机会)+ **当代最优**作学习对象(引导)。图规模 = (n−1)·k。
     //   当代最优自身不作起点(它与引导无差异,relink 无意义、白耗 FES)。多对一(同源 k 个)→ 配 kinshipGreedy 取每源最优。
@@ -190,5 +183,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { RepeatWithBest::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { RepeatWithBest::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_repeatwithbest, LearningTopology, repeatWithBestTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_repeatwithbest, LearningTopology, repeatWithBestTopologyEntry());
 }

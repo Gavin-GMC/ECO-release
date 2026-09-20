@@ -1,33 +1,29 @@
 //------------------------Description------------------------
 // 水波类三算子(源自 Water Wave Optimization):WavePropagation(传播)/ WaveRefraction(折射)/ WaveBreaking(碎波)。
 //   每个体两个状态:波高 h(停滞倒计数)与波长 λ(搜索幅度),同存一个原始 scalar 特性 "wavestate"(k=2)。
+
 //-------------------------Reference-------------------------
 // Zheng, Y.-J. "Water wave optimization: A new nature-inspired metaheuristic."
 //   Computers & Operations Research, 55:1-11, 2015.
-// 忠实原文:
+// :
 //   传播:x'(d) = x(d) + rand(−1,1)·λ·L(d)         (L(d)=该维域宽)
 //   波高:传播改进 → h 重置 h_max;未改进 → h−1
 //   波长(每代全群):λ = λ·α^( −(f−f_min+ε)/(f_max−f_min+ε) )
 //   折射(h 降到 0):x'(d) = N( (x*(d)+x(d))/2 , |x*(d)−x(d)|/2 ),随后 h 重置、λ' = λ·f(x)/f(x')
 //   碎波(传播出新最优):随机维 d 生成孤立波 x'(d) = x(d) + N(0,1)·β·L(d),优则替换;β 随进度 β_max→β_min
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <vector>
 #include <string>
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
-#include "ecflow-constant.h"
+#include "evoflow-rand.h"
+#include "evoflow-constant.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // wavestate 索引:[0]=h 波高、[1]=λ 波长
     namespace wwo { const int H = 0; const int LAMBDA = 1; const double EPS = 1e-12; }
@@ -54,6 +50,8 @@ namespace ECFlow
         static void postAssert(AssertList& list, double* /*paras*/)
         {
             list.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::postAssert));
+            // 本段每轮维护/递减波高 h，供 AssertMatcher 判断折射激活是否具备闭环状态推进。
+            list.add(new Assert(ModuleType::T_learnstrategy, "waveHeightProgress", 1, MatchType::postAssert));
         }
 
         void setProblem(ProblemHandle* problem_handle) override { _comparer = problem_handle->getSolutionComparer(); }
@@ -64,7 +62,7 @@ namespace ECFlow
         {
             int n = population.getSize();
             _snapshot.assign(n, 0.0);
-            double fmin = ECFLOW_MAX, fmax = -ECFLOW_MAX;
+            double fmin = EVOFLOW_MAX, fmax = -EVOFLOW_MAX;
 
             for (int i = 0; i < n; i++)
             {
@@ -136,6 +134,9 @@ namespace ECFlow
         static void postAssert(AssertList& list, double* /*paras*/)
         {
             list.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::postAssert));
+            // 折射会把 h 重置为正值，且 update_s 依赖“新解/同索引旧解”成对可见。
+            list.add(new Assert(ModuleType::T_learnstrategy, "waveHeightReset", 1, MatchType::postAssert));
+            list.add(new Assert(ModuleType::T_learnstrategy, "requiresUnconditionalIndex", 1, MatchType::postAssert));
         }
 
         // 折射后 h 重置 h_max(写子代;λ 先随亲代带过来,待 update_s 按 f(x)/f(x') 更新)
@@ -217,7 +218,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { WavePropagation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { WavePropagation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_wavepropagation, LearningStrategy, wavePropagationEntry());
+    EVOFLOW_REGISTER(lstrat_wavepropagation, LearningStrategy, wavePropagationEntry());
 
     inline Registry<LearningStrategy>::Entry waveRefractionEntry()
     {
@@ -227,7 +228,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { WaveRefraction::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { WaveRefraction::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_waverefraction, LearningStrategy, waveRefractionEntry());
+    EVOFLOW_REGISTER(lstrat_waverefraction, LearningStrategy, waveRefractionEntry());
 
     inline Registry<LearningStrategy>::Entry waveBreakingEntry()
     {
@@ -238,5 +239,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { WaveBreaking::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { WaveBreaking::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_wavebreaking, LearningStrategy, waveBreakingEntry());
+    EVOFLOW_REGISTER(lstrat_wavebreaking, LearningStrategy, waveBreakingEntry());
 }

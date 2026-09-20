@@ -1,13 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // O_Workflow:子种群内 O_Component 的有序执行编排。单表 components 按 config 顺序,每代顺跑:
 //   注入型 Set*** 就地 SET 上下文(ltopology/lstrategy/repairman)、执行型 Run*** 随后消费。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -16,7 +11,7 @@
 #include "solution-initializer.h"
 #include "individual-array.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class OptimizerBuilder;
 

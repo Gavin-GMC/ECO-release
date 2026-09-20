@@ -217,7 +217,7 @@ namespace FileLib {
         }
 #else
         // Linux：getcwd 返回NULL表示失败，成功返回缓冲区指针
-        if (getcwd(buf.data(), BUF_SIZE) == nullptr) {
+        if (getcwd(buf, BUF_SIZE) == nullptr) {
             return "";
         }
 #endif

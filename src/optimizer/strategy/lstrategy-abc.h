@@ -2,23 +2,19 @@
 // ABC(人工蜂群)学习策略。本文件承载 ABC 竖切的两个新算子:
 //   DifferencePerturbation —— 邻域算子 v=x_i+φ(x_i−x_k):随机 1 维、φ∈[−1,1]、k=1 个同伴(拓扑供)。employed/onlooker 共用。
 //   Reinitialize          —— scout 重初始化(随机重生 + 重置特性,含 age 归零);见 scout 段(AgeActivation 拓扑 + 本策略)。
+
 //-------------------------Reference-------------------------
 // Karaboga 2005 ABC。邻域搜索 v_ij=x_ij+φ_ij(x_ij−x_kj)(单随机维 j、φ∈[−1,1]、k≠i 随机同伴)。
 //   与 DE 的 DifferenceCrossover 区别:自参照(self+1 同伴,非 2 同伴)、单维(非全维/cr 逐维)、φ 随机(非固定 F)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // ABC 邻域:v = x_i + φ(x_i − x_k),随机 1 维、φ∈[−1,1]、k = 1 个同伴(学习对象)。其余维保持 x_i。
     class DifferencePerturbation : public LearningStrategy
@@ -55,7 +51,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { DifferencePerturbation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { DifferencePerturbation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_diffperturb, LearningStrategy, differencePerturbationEntry());
+    EVOFLOW_REGISTER(lstrat_diffperturb, LearningStrategy, differencePerturbationEntry());
 
     // scout 重初始化:随机重解 + 重置特性(经 ini_speciality;含 AgeFeature 归零)。**对 age/血缘零依赖**——
     //   由个体自带初始化器(offspring 已 setInitializer)重生,age 归零是特性 ini 的副作用,本策略不认识 age。不评估(RunEvaluate 负责)。
@@ -80,5 +76,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { Reinitialize::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { Reinitialize::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_reinit, LearningStrategy, reinitializeEntry());
+    EVOFLOW_REGISTER(lstrat_reinit, LearningStrategy, reinitializeEntry());
 }

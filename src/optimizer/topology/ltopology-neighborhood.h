@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 邻域学习拓扑 Neighborhood:MOEA/D 的分解式邻域交配——每个子问题 i(=槽位下标)从其 T 个最近权重邻居中取 2 个
 //   作交配对象(以概率 δ 邻域内、否则全群逃局部)。权重/邻域由 N 确定式生成并按 N 缓存。
+
 //-------------------------Reference-------------------------
 // Q. Zhang, H. Li, "MOEA/D: A Multiobjective Evolutionary Algorithm Based on Decomposition,"
 // IEEE Trans. Evolutionary Computation, vol. 11, no. 6, pp. 712-731, 2007, doi: 10.1109/TEVC.2007.892759.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include "learning-topology.h"
 #include "mo-util.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class Neighborhood : public LearningTopology
     {
@@ -68,8 +64,8 @@ namespace ECFlow
                 for (int e = 0; e < 2; e++)
                 {
                     int idx;
-                    if (rand01() < _delta) idx = _B[i][ECFlow::get_int(0, (int)_B[i].size() - 1)];   // 邻域内
-                    else                   idx = ECFlow::get_int(0, N - 1);                            // 全群(逃局部)
+                    if (rand01() < _delta) idx = _B[i][EvoFlow::get_int(0, (int)_B[i].size() - 1)];   // 邻域内
+                    else                   idx = EvoFlow::get_int(0, N - 1);                            // 全群(逃局部)
                     graph->addEnd(&(*cswarm)[idx].solution);
                 }
             }
@@ -86,5 +82,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { Neighborhood::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { Neighborhood::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_neighborhood, LearningTopology, neighborhoodEntry());
+    EVOFLOW_REGISTER(ltopo_neighborhood, LearningTopology, neighborhoodEntry());
 }

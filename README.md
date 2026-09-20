@@ -1,98 +1,97 @@
-# ECFlow
+<p align="center">
+  <img src="figs/Logo-readme.png" alt="EvoFlow" width="560">
+</p>
 
-**ECFlow** 是一个 header-only 的 C++17 演化计算框架，面向组合优化与连续数值优化。它把"问题建模"与"优化器装配"两条主线解耦：用统一的接口描述问题（变量 / 目标 / 约束 / 启发），用可插拔的算子流水线装配优化算法，二者在运行期通过问题句柄对接。
+> 本版本已完成 Windows 全量回归、发布接口及 Ubuntu WSL 构建与便携接口验证。
 
-## 特性
+# EvoFlow
 
-- **问题建模**：变量域、目标、约束（域 / 基数 / 累积 / 图 / 表达式）、启发式；内置 **14 类问题模板**（TSP、MKP、QAP、CFLP、CPMP、CVRP、FJSP、MDS、MIS、SR、STP、WFS、数值基准）。
-- **优化算法**：可插拔算子（学习拓扑 / 学习策略 / 子代生成 / 评估 / 环境选择 / 修复），覆盖 PSO、GA、DE、ACO、EDA、CMA-ES、ES、免疫、烟花、灰狼 / 鲸鱼等系列及局部搜索。
-- **配置驱动**：换算法 = 换配置，不改代码结构；配置可存取为 `.cfg`（文本 / JSON）。
-- **可执行程序**：命令行工具 `ecflow`，从文件读入「问题 + 配置」跑优化、输出结果，可被脚本调用。
-- **跨平台构建**：CMake（Windows / Linux）与 Visual Studio 工程两种方式；MSVC 静态运行时，产物自包含。
+EvoFlow 是一个面向组合优化与连续优化的 C++17 演化计算平台。它把问题建模、优化器装配、运行评估和统计分析分离，并通过注册式组件目录组合拓扑、策略、生成器、评价器与选择器。
+
+当前公开产品版本为 **3.0.1.5**。配置文件的 `v3.1/v3.2` 以及结果、过程文件的格式版本是独立协议版本，不随产品版本改写。
+
+## 支持范围
+
+| 能力 | 当前验证范围 |
+|---|---|
+| Windows 命令行、图形界面、模型连接 | Windows x64 |
+| Windows Python 预编译包 | Windows x64，64 位 CPython 3.8–3.12 |
+| Linux C++ 核心与命令行 | 已在 Ubuntu 24.04.4 WSL2 x86_64、GCC 13.3、CMake 3.28.3、Ninja 1.11.1 完成源码构建与运行验证；不提供 Linux 预编译发布包 |
+| Linux Python 接口 | 已在上述环境以 CPython 3.12.3 完成源码构建和可移植测试；不提供 Linux 预编译模块，也不承诺跨 Python 小版本二进制兼容 |
+| Linux 图形界面和模型连接 | 当前不支持 |
+| macOS | 未验证，不作支持承诺 |
 
 ## 快速开始
 
-### 1. 构建可执行程序
+在 Windows 上双击 `evoflow.exe`，或在项目目录执行：
 
-**CMake（跨平台）**
-```sh
-cmake -S build/cmake -B build/cmake/out
-cmake --build build/cmake/out --config Release   # → 项目根 ecflow(.exe)
+```text
+evoflow
 ```
 
-**Visual Studio（Windows）**
-```
-打开 build/vs/ecflow.sln，选 Release|x64，生成 → 项目根 ecflow.exe
-```
+程序会启动本地服务并打开图形界面，可用于定义或加载问题、构筑优化器、运行当前配置以及分析实验结果。
 
-### 2. 运行
+命令行运行单个问题与配置：
 
-```sh
-ecflow <问题文件> <配置文件> [选项]
-
-# 例:跑 TSP 算例 burma14,用蚁群配置 ACS,种子 42
-./ecflow _pdata/tsp/burma14.tsp config/ACS.cfg -s 42
+```text
+evoflow run <问题文件> <配置文件>
 ```
 
-常用选项：`-s <种子>`、`-n <运行次数>`、`-o <输出文件>`、`--max-fes <N>`（覆盖预算）、`-q`（只输出 fitness）、`-v`（进度上屏）、`-h`（帮助）。
+查看产品版本：
 
-> 运行时 `ecflow` 按**当前工作目录**解析 `_pdata/`、`config/`；在项目根运行可用相对路径，从别处运行请传绝对路径。详见 [手册 · 可执行程序](docs/手册/13-使用-可执行程序.md)。
-
-### 3. 作为库使用
-
-```cpp
-#include "ecflow.h"        // 统一入口
-using namespace ECFlow;
+```text
+evoflow --version
 ```
-见 `tutorial/` 的示例与 [用户手册](docs/手册/README.md)。
 
-## 目录结构
+检查最小/完整数据包：
 
-| 目录 | 内容 |
-|---|---|
-| `src/` | 框架源码（header-only + 少量编译单元） |
-| `_pdata/` | 问题算例数据（各家族格式见 `_pdata/<kind>/README.md`） |
-| `config/` | 优化器配置表（`.cfg`） |
-| `tutorial/` | 使用示例 |
-| `docs/手册/` | 用户手册（使用者篇 + 开发者篇） |
-| `build/` | 构建工程（`cmake/`、`vs/`） |
-| `thirdparty/` | 第三方依赖（muparserx 等，已内置） |
+```text
+evoflow data
+python -m evoflow --check-data
+```
+
+完整参数见 [可执行程序手册](docs/手册/13-使用-可执行程序.md)。
+
+## Windows 发布资产
+
+Windows x64 发布提供三个相互独立但可组合的 ZIP：
+
+- `EvoFlow-3.0.1.5-windows-x64.zip`：程序、公开 C++/Python 源码、五个 CPython 3.8–3.12 原生模块、配置、教程、文档和 13 个首方最小样例；
+- `EvoFlow-3.0.1.5-data-minimal.zip`：可单独取得的同一组 13 个首方样例；
+- `EvoFlow-3.0.1.5-data-full.zip`：701 个许可状态明确的额外实例 overlay。
+
+每个 ZIP 都有同名 `.sha256`。程序包解压后可直接运行 `evoflow.exe`；需要完整数据时，再把 full ZIP 解压到同一目录。正式程序树带 `release-manifest.json`，记录除 manifest 自身外每个文件的字节数和 SHA-256。
 
 ## 文档
 
-用户手册见 [`docs/手册/`](docs/手册/README.md)：问题建模、优化器配置、结果分析、可执行程序，以及扩展开发指南。
+- [项目总览](docs/手册/00-总览.md)
+- [图形界面](docs/手册/14-使用-图形界面.md)
+- [Python 接口](docs/手册/15-使用-Python接口.md)
+- [问题模块](docs/手册/10-使用-问题模块.md)
+- [优化器配置](docs/手册/11-使用-优化器配置.md)
+- [结果分析](docs/手册/12-使用-结果分析.md)
+- [数据包与外部数据](docs/数据包与外部数据.md)
+- [EvoFlow 3.0.1.5 发布日志](发布日志.md)
+- [未来更新计划](未来更新计划.md)
+- [源码构建入口](build/README.md)
+- [开发架构与流程](docs/手册/20-开发-架构与流程.md)
+- [完整用户手册索引](docs/手册/README.md)
 
-## 许可
+## 从源码构建
 
-本项目采用 **BSD 3-Clause License**。完整条款见 [`LICENSE`](LICENSE)。
-
+```text
+cmake -S . -B obj-cmake-release
+cmake --build obj-cmake-release --config Release
 ```
-BSD 3-Clause License
 
-Copyright (c) 2025, Mingcan Geng
+也可以使用 `build/cmake/` 入口，或在 Visual Studio 2022 中打开 `build/vs/evoflow.sln`；详细说明见 [源码构建入口](build/README.md)。`build/` 保存可发布的工程入口，生成文件应放在可删除的 `obj-*` 目录。
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Windows 发布候选由独立干净暂存树通过 Visual Studio 2022/CMake 构建；`evoflow.exe` 使用 `/MT`，不要求另装 VC++ 可再发行运行时。Python 不加入 CMake，预编译模块仍由独立 Python 构建入口生成。
 
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
+发布目录中的 `figs/Logo.png` 供图形界面使用；README 使用由同一原图纯裁剪生成的 `figs/Logo-readme.png`，仅去除上下空白。移动 `evoflow.exe` 时，请保留同级 `figs` 目录。
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+## 许可与外部组件
 
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+EvoFlow 自有源码采用 [BSD 3-Clause License](LICENSE)。外部组件的版本、版权及许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
+自 `v3` 起，源码树、构建、公开 API 和发布物均不包含 CEC2013 竞赛基准。用户如已自行合法取得外部 benchmark，可通过 [`tutorial/7.external-benchmark.cpp`](tutorial/7.external-benchmark.cpp) 的 C++ functor 边界或 [`python/examples/external_benchmark.py`](python/examples/external_benchmark.py) 的 Python callable 接入；现成 `evoflow.exe`/图形界面不会动态加载任意外部原生库。

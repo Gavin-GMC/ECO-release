@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 优化组件基类 O_Component:O_Workflow 流水线的统一单元。每个 stage 的 run(context) 读写共享上下文。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <queue>
@@ -20,7 +15,7 @@
 #include "terminator.h"
 #include "solution-repairman.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class O_Component
     {

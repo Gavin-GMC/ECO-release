@@ -1,28 +1,23 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // HeuristicDefine:问题启发(inspiration)域的定义切片(原单体 Problem 的启发部分)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
-#include "ecflow-inspiration.h"
-#include "ecflow-calculator.h"
-#include "ecflow-functor.hpp"
+#include "evoflow-inspiration.h"
+#include "evoflow-calculator.h"
+#include "evoflow-functor.hpp"
 #include "ExprTree.h"
 #include "variable.h"
-#include "ecflow-basicfunc.h"   // stringSplit
+#include "evoflow-basicfunc.h"   // stringSplit
 #include "calc-spec.h"
 #include "heuristic-manager.h"
 #include "variable-manager.h"
 #include "constraint-manager.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     enum class HeuristicKind { random, boundary, func, matrix, expression };
 

@@ -1,17 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // ProblemHandle:四域 XXManager 的组合 + 跨域编排,由 Problem::compile() 产出。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include <cstring>
+#include <limits>
 #include <memory>
 
 #include "variable-manager.h"
@@ -20,10 +16,10 @@
 #include "heuristic-manager.h"
 #include "solution.h"
 #include "solution-decoder.h"
-#include "ecflow-math.h"        // equal(), intelliTrunc()
-#include "ecflow-constant.h"
+#include "evoflow-math.h"        // equal(), intelliTrunc()
+#include "evoflow-constant.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class ProblemHandle final
     {
@@ -101,18 +97,18 @@ namespace ECFlow
         void constrainChange(int dim, double value)    { _con.constrainChange(_var, dim, value); }
 
         // 违反度 = **全部已注册约束**的**原始** violation 之和(**不乘惩罚权重、不看目标绑定**)。
-        //   与原版 ECFlow 逐行等价。平台有**两条**约束通路,勿混:
+        //   与原版 EvoFlow 逐行等价。平台有**两条**约束通路,勿混:
         //     * `constraintViolation` / `solutionLegality` —— **用户 API**,原始违反量,**优化器不调用**;
         //     * `getPenalty4Object`(见 solutionEvaluate) —— **评估路径**,`violation × 权重`,且**仅算绑定到该目标**的约束。
         //   该分工在原版即如此,非 v2 引入。
-        // **含变量域**:`compile()` 自动为每个决策变量补的 range 约束**计入**本值 ——
+        // **含变量域**(v1.4.6.5 明确):`compile()` 自动为每个决策变量补的 range 约束**计入**本值 ——
         //   变量域是用户在 `addVariable(name, lo, hi, ...)` 时**亲手声明**的,域外解确实违反了用户的声明。
         //   原版报的数不含域,只因它**根本不检查域**(缺口),非有意语义;故此处不是"与原版分歧",而是原版漏检。
         //   自动补的域约束 `penalty_w=0` 且未绑定目标 → **只收缩可行域、不进任何目标的惩罚**,仅在本值中体现。
         //   用户为某变量显式声明 range 时**不再自动补**(否则同一处越界被算两遍),详见 Problem::compile()。
         double constraintViolation(const Solution& s) { setResult(s); return _con.constraintViolation(_var); }
 
-        // 是否完全不违反约束。**或逻辑短路**:撞到第一条违反即返回,不再计算其余约束(与原版 ECFlow 同构)。
+        // 是否完全不违反约束。**或逻辑短路**:撞到第一条违反即返回,不再计算其余约束(与原版 EvoFlow 同构)。
         //   v2 曾改写为 `equal(constraintViolation(s), 0.0)` —— 在 violation 恒非负时**结果等价**,
         //   但**总要算完全部约束**;v1.4.6.5 改回短路(非法解常在头几条即可判定)。约束集合与
         //   constraintViolation 完全一致(含自动补的变量域约束),故二者结论恒一致:legality ⟺ violation==0。
@@ -125,8 +121,33 @@ namespace ECFlow
         // ---------------- evaluation (cross-domain: var + obj + con) ----------------
         void solutionEvaluate(Solution& solution)
         {
-            setResult(solution);
             bool full = _obj.getEvaluateMode();
+            bool has_empty_decision = false;
+            for (int dim = 0; dim < _var.getProblemSize(); dim++)
+            {
+                if (is_empty(solution.result[dim]))
+                {
+                    has_empty_decision = true;
+                    break;
+                }
+            }
+
+            // EMPTYVALUE is a normal "not constructed" state. Do not pass it to
+            // user objectives or constraints: give every participating objective
+            // a finite worst value so later valid solutions replace it naturally.
+            if (has_empty_decision)
+            {
+                constexpr double worst_magnitude = std::numeric_limits<double>::max() / 4.0;
+                for (int oid = 0; oid < _obj.objectNumber(); oid++)
+                {
+                    if (!full && _obj.getObjectivePriority(oid) < 0)
+                    { solution.fitness[oid] = EMPTYVALUE; continue; }
+                    solution.fitness[oid] = _obj.isMin(oid) ? worst_magnitude : -worst_magnitude;
+                }
+                return;
+            }
+
+            setResult(solution);
             for (int oid = 0; oid < _obj.objectNumber(); oid++)
             {
                 // partial mode: non-participating (priority < 0) objectives are left

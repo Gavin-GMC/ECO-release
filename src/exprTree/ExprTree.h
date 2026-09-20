@@ -1,14 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 表达式树计算器后端:基于 muParserX 解析公式字符串并求值,供 TreeCalculator/公式约束/启发使用。
+
 //-------------------------Reference-------------------------
 // 依赖第三方 muParserX(thirdparty/muparserx)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <muparserx/mpParser.h>
@@ -16,7 +12,7 @@
 #include <unordered_map>
 #include "variable.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
     /**
     * @brief ȫ�������Ԫ��ӳ���
@@ -27,7 +23,7 @@ namespace ECFlow {
     extern const std::unordered_map<std::string, int> g_OperatorArity;
 
     /**
-     * @brief ECFlow��ܱ���ʽ��������װ��
+     * @brief EvoFlow��ܱ���ʽ��������װ��
      * @details ��muparserx����ж��η�װ�����Ⱪ¶�����"����-�����-����-ȡ���"���̣�
      *          �ڲ�ͨ�������洢����ά�����������������ⲿ����ָ��ʧЧ���µ�Ұָ�����⣬
      *          ������������顢����ȶ����ͱ���ʽ���㳡��
@@ -140,4 +136,4 @@ namespace ECFlow {
         std::vector<std::string> m_variableName;// ���ڴ洢���б���������, ˳���� LinkVariable ��˳�򱣳�һ��
     };
 
-} // namespace ECFlow
+} // namespace EvoFlow

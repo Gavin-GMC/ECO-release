@@ -1,24 +1,19 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // domain_view:连续域 interval_set 之上的「变量域视图」。**双模式**——
 //   grid(网格/离散族) / measure(测度/连续族),接口对齐、由句柄按变量类型选定。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <cmath>
 #include <cstdint>
 #include "cp/core/interval_set.h"
-#include "ecflow-rand.h"      // ECFlow::wide_rand, ECFlow::rand01
-#include "ecflow-constant.h"  // EMPTYVALUE
+#include "evoflow-rand.h"      // EvoFlow::wide_rand, EvoFlow::rand01
+#include "evoflow-constant.h"  // EMPTYVALUE
 #include "variable.h"       // VariableType(供 viewModeOf 翻译"变量类型 → 视图模式")
 
-namespace ECFlow {
+namespace EvoFlow {
 
 // getFeasibleList 返回枚举点的全局上限：当某维真实可行网格点数超过它时，列表被
 // 降采样为至多该数量、在可行域内尽量均匀分布的点（端点包含）。仅作用于
@@ -58,13 +53,14 @@ struct domain_view {
     }
 
     // 把任意值落到该变量的合法取值上（不检查是否在域内）。**全平台唯一的"值→取值"落点**
-    //   。
+    //   (v1.4.7 收编:原 ProblemHandle::choiceDiscretized 自行实现了一份,与本函数并存且语义不同)。
     //
     // ★ measure(连续)→ **原值返回,不做任何离散化**。连续变量的合法取值就是实数本身,没有理由被量化。
     //   accuracy 在此仅表达"多细算同一个值"(供 remove_point 界定"删掉一个值"的邻域、及输出/展示),
     //   **不作用于存储值** —— 若在此量化,连续变量就又被压回网格,measure 模式也就白设了。
     //
     // ★ grid(离散)→ 吸附到**最近**的网格点 lowbound + k*accuracy(就近舍入)。
+    //   v1.4.7.1 由"截断向零 + 浮点噪声特判"改为就近,三条理由:
     //   ⑴**去偏置**:商 `(v-lowbound)/accuracy` **恒非负** → 截断向零实为 **floor**。设提议值 = 格点 k + 噪声,
     //      则 `+0.6·acc → trunc(k+0.6)=k`(移动 **0**)、`-0.6·acc → trunc(k-0.6)=k-1`(移动 **-1·acc**)
     //      —— 正噪声被吃掉、负噪声被放大,每次离散化平均把值往**下界**拉 `0.5·acc`,
@@ -75,6 +71,7 @@ struct domain_view {
     //      —— 那个特判本就是截断的症状,改就近后随之消失。
     //   注:llround 返回 long long(值域 9e18),细步长下的商(如 [-100,100]@1e-8 约 2e10)远未触及。
     double snap(double v) const {
+        if (is_empty(v)) return EMPTYVALUE;
         if (is_measure()) return v;   // 连续:不离散化,原值返回
         long long k = std::llround((v - lowbound) / accuracy);
         return lowbound + static_cast<double>(k) * accuracy;
@@ -213,16 +210,40 @@ struct domain_view {
     //   measure 下即区间端点本身(无需吸附到格点)。
     double boundary(bool left = true) const {
         if (set.is_empty()) return EMPTYVALUE;
-        const auto& iv = left ? set.intervals().front() : set.intervals().back();
-        if (is_measure()) return left ? iv.lower() : iv.upper();
-        long long klo, khi; grid_range(iv.lower(), iv.upper(), klo, khi);
-        if (khi < klo) return EMPTYVALUE;
-        return lowbound + static_cast<double>(left ? klo : khi) * accuracy;
+        const auto& intervals = set.intervals();
+        if (is_measure()) {
+            const auto& iv = left ? intervals.front() : intervals.back();
+            return left ? iv.lower() : iv.upper();
+        }
+
+        // remove_point() operates on the underlying continuous interval_set.
+        // At a removed grid cell boundary it can leave a zero-width fragment
+        // such as [0.5,0.5], which is a valid continuous interval but contains
+        // no value on a unit grid. count/enumerate/random/closest already skip
+        // such fragments; boundary must do the same instead of returning
+        // EMPTYVALUE while a later/earlier interval still has legal grid points.
+        if (left) {
+            for (const auto& iv : intervals) {
+                long long klo, khi; grid_range(iv.lower(), iv.upper(), klo, khi);
+                if (khi >= klo)
+                    return lowbound + static_cast<double>(klo) * accuracy;
+            }
+        }
+        else {
+            for (std::size_t i = intervals.size(); i-- > 0;) {
+                const auto& iv = intervals[i];
+                long long klo, khi; grid_range(iv.lower(), iv.upper(), klo, khi);
+                if (khi >= klo)
+                    return lowbound + static_cast<double>(khi) * accuracy;
+            }
+        }
+        return EMPTYVALUE;
     }
 
     // 域内距 v 最近的可行值；域空返回 EMPTYVALUE。
     //   measure 下把 v 钳到最近区间(不吸附格点)。
     double closest(double v) const {
+        if (is_empty(v)) return EMPTYVALUE;
         double best = EMPTYVALUE, bestd = 1e300;
         if (is_measure()) {
             for (const auto& iv : set.intervals()) {

@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/core/config.h
 //
@@ -6,7 +8,7 @@
 //
 #include <cstddef>
 
-namespace ECFlow {
+namespace EvoFlow {
 
 struct Config {
     // 单变量域 / 节点缓存允许的最大碎片数；超出则塌缩（填最小乘性比值的同号洞）。
@@ -24,4 +26,4 @@ struct Config {
     double delta_rel = 1e-12;
 };
 
-} // namespace ECFlow
+} // namespace EvoFlow

@@ -1,21 +1,14 @@
 //------------------------Description------------------------
 // 血缘定向环境选择 KinshipSelector(第一层):onlooker 多对一场景——offspring[j] 源自哪个源由血缘 id 决定,
 //   读 offspring[j].kinship.parent_id 定位到源槽,交第二层接受准则(通常 AgingAccept)逐源比较/替换。
-//-------------------------Reference-------------------------
-// 新增(ABC 重做,1.4.4.5)。KINSHIP-ID 消费方:与 Index(位置 1:1)对偶,用于 Roulette 有放回选源的多对一归属。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "selector.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 血缘定向:offspring[j] 与其源亲本(parent[parent_id])比较。第二层接受准则决定是否替换 + 计龄。
     class KinshipSelector final : public EnvirSelect
@@ -58,5 +51,5 @@ namespace ECFlow
             [](const double* p) -> EnvirSelect* { return new KinshipSelector(makeAccept(p)); },
             [](AssertList&, const double*) {}, [](AssertList& L, const double* p) { acceptPostAssert(p, L); } };   // 追加接受准则契约
     }
-    ECFLOW_REGISTER(sel_kinship, EnvirSelect, kinshipSelectorEntry());
+    EVOFLOW_REGISTER(sel_kinship, EnvirSelect, kinshipSelectorEntry());
 }

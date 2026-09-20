@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/core/small_vector.h
 //
@@ -9,7 +11,7 @@
 #include <cstddef>
 #include <utility>
 
-namespace ECFlow {
+namespace EvoFlow {
 
 template <class T, std::size_t N>
 class small_vector {
@@ -125,4 +127,4 @@ private:
     }
 };
 
-} // namespace ECFlow
+} // namespace EvoFlow

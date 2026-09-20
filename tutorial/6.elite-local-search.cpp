@@ -1,11 +1,13 @@
 // 6.elite-local-search.cpp — 教程:如何给已有算法**追加精英局部搜索段**。
 //   精英局搜 = 每代取若干精英、在其邻域生成候选、择优后归属替换 → 对已有算法(PSO/GA/…)的**强化(intensification)**。
 //   落法:纯配置——把 [拓扑→策略→生成→评估→选择] 一段**接在主算法各段之后**(WorkflowSetter 调用顺序 = 执行顺序)。
-//   构建: build.ps1 tutorial\6.elite-local-search.cpp   输出英文(纪律 6)。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
-#include "ecflow.h"
+#include "evoflow.h"
 #include "config-setter.h"
-using namespace ECFlow;
+using namespace EvoFlow;
 
 static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 
@@ -35,7 +37,7 @@ int main()
         ConfigBuilder cb;
         auto wf = cb.workflow("pso");
         wf.initializer("Random"); wf.repair.boundary();
-        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.5 * 20.0 / FES);
+        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         wf.generator.orderedConstruct(); wf.evaluator.basic(); wf.selector.index(false);
         best_pso = run(cb, p, "pso", FES);
     }
@@ -52,7 +54,7 @@ int main()
         auto wf = cb.workflow("pso_elite_pop");
         wf.initializer("Random"); wf.repair.boundary();
         // —— 主算法段:PSO ——
-        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.5 * 20.0 / FES);
+        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         wf.generator.orderedConstruct(); wf.evaluator.basic(); wf.selector.index(false);
         // —— 追加:精英局搜段(种群 top-e)——
         wf.topology.topIndividual(3, 3);          // top-3 精英,各生成 3 个邻居
@@ -70,7 +72,7 @@ int main()
         ConfigBuilder cb;
         auto wf = cb.workflow("pso_elite_arc");
         wf.initializer("Random"); wf.repair.boundary();
-        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.5 * 20.0 / FES);
+        wf.topology.pgBest(); wf.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         wf.generator.orderedConstruct(); wf.evaluator.basic(); wf.selector.index(false);
         // —— 追加:精英局搜段(档案精英)——
         wf.topology.elite(3, 3);                  // 档案精英,各重复 3 次

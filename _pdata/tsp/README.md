@@ -9,7 +9,7 @@
 ## 2. 文件位置与加载
 
 - 路径：`_pdata/tsp/<name>.tsp`
-- 加载：`PT_TSP::load("<name>")`（例：`load("burma14")`）；也可传完整/相对路径。
+- 加载：`PT_TSP::load("<name>")`（例：`load("sample")`）；也可传完整/相对路径。
 
 ## 3. 文件格式
 
@@ -23,7 +23,7 @@ TSPLIB 纯文本，空白分隔。头部为 `KEY: value`，随后是坐标/距�
 | `TYPE:` | `TSP`（对称）或 `ATSP`（非对称）——通用载入器按此分派 |
 | `COMMENT:` | 注释（整行跳过） |
 | `DIMENSION:` | 城市数 `n` |
-| `EDGE_WEIGHT_TYPE:` | 距离类型：`EUC_2D`/`EUC_3D`/`MAN_2D`/`MAX_2D`/`GEO`/`ATT`/`CEIL_2D`/`EXPLICIT` … |
+| `EDGE_WEIGHT_TYPE:` | 距离类型：`EUC_2D`/`EUC_3D`（欧氏+四舍五入）、`MAN_2D`（曼哈顿）、`MAX_2D`（切比雪夫）、`CEIL_2D`（欧氏+向上取整）、`GEO`（**地理坐标真大圆**：经纬度→弧度+球面余弦，TSPLIB 内建取整；v2.1.2 修正——此前误当欧氏，[[T-DIST-TYPE]]）、`ATT`、`EXPLICIT` … |
 | `EDGE_WEIGHT_FORMAT:` | `EXPLICIT` 时的矩阵排布：`FULL_MATRIX`/`UPPER_ROW`/`LOWER_DIAG_ROW` … |
 
 ### 3.2 数据段
@@ -33,18 +33,18 @@ TSPLIB 纯文本，空白分隔。头部为 `KEY: value`，随后是坐标/距�
 
 ## 4. 样例
 
-标准 TSPLIB 头（如 `a280.tsp`）：
+首方最小样例：
 
 ```
-NAME: a280
-COMMENT: drilling problem (Ludwig)
+NAME: sample
 TYPE: TSP
-DIMENSION: 280
+DIMENSION: 3
 EDGE_WEIGHT_TYPE: EUC_2D
 NODE_COORD_SECTION
-1 288 149
-2 288 129
-…
+1 0 0
+2 3 0
+3 0 4
+EOF
 ```
 
-本目录含多个标准 TSPLIB 实例（`burma14`、`berlin52`、`a280` …），可直接 `load("<名>")`。
+公开包只提供上述 EvoFlow 首方样例，不重新分发 TSPLIB 实例或参考 tour。用户可从 TSPLIB 发布方取得数据并按 [`../../tutorial/external-data/README.md`](../../tutorial/external-data/README.md) 解压、校验和接入。

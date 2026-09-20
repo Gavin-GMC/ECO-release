@@ -1,15 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 带容量设施选址 (Capacitated Facility Location Problem) 问题模板。
+
 //-------------------------Reference-------------------------
 // Avella P., Boccia M. (2009) 等的 SSCFLP test bed(FrontierCO 的 CFLP 基准来源)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -18,9 +16,9 @@
 #include <vector>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_CFLP
+    class PT_CFLP : public ProblemTemplate
     {
     private:
         std::string         _name = "cflp";
@@ -58,7 +56,8 @@ namespace ECFlow
 
     public:
         PT_CFLP() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_CFLP(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _M; }
         void setPenalty(double p) { _penalty = p; }
 
@@ -66,7 +65,8 @@ namespace ECFlow
                      std::vector<double> dem, std::vector<double> c)
         { _F = F; _M = M; _cap = std::move(cap); _fcost = std::move(fcost); _dem = std::move(dem); _c = std::move(c); }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/cflp/<name>.cflp,含统一行号规范(每行前导 1-based 索引)。overwrite=false 不覆盖。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/cflp/" + _name + ".cflp";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("CFLP save: file exists (use overwrite): " + path); return; } }
@@ -80,7 +80,7 @@ namespace ECFlow
             for (int i = 0; i < _M; ++i) { out << (i + 1); for (int j = 0; j < _F; ++j) out << " " << _c[(size_t)i * _F + j]; out << "\n"; }
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_F == 0 || _M == 0) return nullptr;
             Problem* back = new Problem(_name);
@@ -94,7 +94,7 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "cflp", "cflp"));
@@ -103,7 +103,7 @@ namespace ECFlow
             std::vector<double> cap, fcost, dem, c;
             auto need = [&](bool needM) -> bool   // 段必须在 FACILITIES/CUSTOMERS 计数之后
             { if (F <= 0 || (needM && M <= 0)) { sys_logger.error("CFLP '" + name + "': section before FACILITIES/CUSTOMERS"); return false; } return true; };
-            // 统一行号规范:每逻辑行以 1-based 索引开头(读入即忽略)。向量=每元素一行 `idx val`;矩阵=每行 `idx v0..v_{cols-1}`。
+            // 统一行号规范(v1.4.9):每逻辑行以 1-based 索引开头(读入即忽略)。向量=每元素一行 `idx val`;矩阵=每行 `idx v0..v_{cols-1}`。
             std::string idx;
             auto rdv = [&](std::vector<double>& v, int n) { v.assign(n, 0); for (int i = 0; i < n && ok; ++i) if (!(f >> idx >> v[i])) ok = false; };
             auto rdm = [&](std::vector<double>& v, int rows, int cols) { v.assign((size_t)rows * cols, 0); for (int r = 0; r < rows && ok; ++r) { if (!(f >> idx)) { ok = false; break; } for (int cc = 0; cc < cols && ok; ++cc) if (!(f >> v[(size_t)r * cols + cc])) ok = false; } };
@@ -123,3 +123,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(cflp, "CFLP", EvoFlow::PT_CFLP);

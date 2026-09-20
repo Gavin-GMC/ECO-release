@@ -1,18 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 交叉算子基类 Crossover:以特定方式交换不同个体的片段生成新候选解。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include "ecflow-basicfunc.h"
+#include "evoflow-basicfunc.h"
 #include "learning-strategy.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class Crossover : public LearningStrategy
     {

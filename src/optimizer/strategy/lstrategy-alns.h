@@ -1,32 +1,28 @@
 //------------------------Description------------------------
 // 自适应算子选择 AdaptiveOperatorSelection(源自 ALNS 的自适应层):持一个**低层邻域算子池**,每代按**权重轮盘**
 //   选一个算子委托生成;依本代结果给该算子**评分**,每 segment_len 代按反应因子更新权重 → 好算子被选中更频繁。
+
 //-------------------------Reference-------------------------
 // Ropke, S., Pisinger, D. "An adaptive large neighborhood search heuristic for the pickup and delivery
 //   problem with time windows." Transportation Science, 40(4):455-472, 2006.
-// 忠实原文自适应层三要素:
+// 自适应层三要素:
 //   ①**轮盘选算子**:P(i) = w_i / Σw_j;
 //   ②**评分 σ**:σ1=产生**新全局最优**、σ2=优于当前解、σ3=被接受但更差(原文经验值 33/9/13);
 //   ③**权重更新**(每 segment 结束):w_i = w_i(1−ρ) + ρ·(π_i/θ_i)(π=本段累计得分、θ=本段使用次数、ρ=反应因子);
 //      未使用(θ=0)的算子权重保持。
 // 原文的**破坏-重建大邻域**由池内算子承担(如 `DestructRebuild`);原文的 **SA 式接受**由**选择器**承担
 //   (`indexAnneal`),与框架"生成/接受"两层分工一致,不塞进算子。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 可入池的低层邻域算子(枚举 → tag);均无特性需求、默认参数即适合局搜
     inline const char* const* alnsOpTags()
@@ -35,6 +31,20 @@ namespace ECFlow
         return tags;
     }
     inline int alnsOpCount() { return 7; }
+
+    inline bool alnsOpProvidesConstructive(const char* tag)
+    {
+        AssertList post;
+        Registry<LearningStrategy>::instance().postAssert(tag, post, nullptr);
+        for (int i = 0; i < (int)post.getSize(); i++)
+        {
+            Assert& a = post[i];
+            if (a.getModuleType() == ModuleType::T_learnstrategy &&
+                a.getitem() == "constructive" && a.getNumber() >= 1)
+                return true;
+        }
+        return false;
+    }
 
     class AdaptiveOperatorSelection : public LearningStrategy
     {
@@ -209,11 +219,22 @@ namespace ECFlow
                 for (int i = 0; i < cnt; i++) { int id = (int)p[3 + i];
                     if (id >= 0 && id < alnsOpCount()) Registry<LearningStrategy>::instance().preAssert(alnsOpTags()[id], L, nullptr); }
             },
-            [](AssertList& L, const double* p) {   // 池内算子 postAssert 的并集
-                if (!p) return; int cnt = (int)p[2];
-                for (int i = 0; i < cnt; i++) { int id = (int)p[3 + i];
-                    if (id >= 0 && id < alnsOpCount()) Registry<LearningStrategy>::instance().postAssert(alnsOpTags()[id], L, nullptr); }
+            [](AssertList& L, const double* p) {
+                // 需求可取并集(任一候选都可能执行)，能力必须取交集：只有所有可能被轮盘选中的
+                // 内层算子都支持逐维构造，AdaptiveOperatorSelection 才能安全声明 constructive。
+                if (!p) return;
+                int cnt = (int)p[2];
+                bool any = false, all_constructive = true;
+                for (int i = 0; i < cnt; i++)
+                {
+                    int id = (int)p[3 + i];
+                    if (id < 0 || id >= alnsOpCount()) continue;
+                    any = true;
+                    if (!alnsOpProvidesConstructive(alnsOpTags()[id])) all_constructive = false;
+                }
+                if (any && all_constructive)
+                    L.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::postAssert));
             } };
     }
-    ECFLOW_REGISTER(lstrat_adaptiveopselect, LearningStrategy, adaptiveOperatorSelectionEntry());
+    EVOFLOW_REGISTER(lstrat_adaptiveopselect, LearningStrategy, adaptiveOperatorSelectionEntry());
 }

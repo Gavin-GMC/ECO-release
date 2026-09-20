@@ -1,18 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 免疫算法(克隆选择)用两个策略:
 //   AffinityHypermutation —— 亲和度反比超变异(门控率装饰器):好抗体变异弱、差抗体变异强;逐维以亲和度缩放的
 //     变异率门控一个既有变异算子(默认 Gauss)。这是免疫算法的标志特征(亲和度成熟)。
 //   RandomGeneration      —— 域内随机重采样(感受器编辑用:产全新随机抗体,忽略父代)。
+
 //-------------------------Reference-------------------------
 // L. N. de Castro, F. J. Von Zuben, "Learning and optimization using the clonal selection principle,"
 // IEEE Trans. Evolutionary Computation, vol. 6, no. 3, pp. 239-251, 2002, doi: 10.1109/TEVC.2002.1011539.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
@@ -25,10 +21,10 @@
 #include "individual-array.h"
 #include "problem-handle.h"
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 亲和度反比超变异(门控率装饰器):包一个既有变异算子,以亲和度缩放的率逐维门控。
     class AffinityHypermutation : public LearningStrategy
@@ -122,6 +118,6 @@ namespace ECFlow
             [](AssertList& L, const double* p) { RandomGeneration::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { RandomGeneration::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_affinityhypermutation, LearningStrategy, affinityHypermutationEntry());
-    ECFLOW_REGISTER(lstrat_randomgeneration,      LearningStrategy, randomGenerationEntry());
+    EVOFLOW_REGISTER(lstrat_affinityhypermutation, LearningStrategy, affinityHypermutationEntry());
+    EVOFLOW_REGISTER(lstrat_randomgeneration,      LearningStrategy, randomGenerationEntry());
 }

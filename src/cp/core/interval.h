@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/core/interval.h
 //
@@ -17,7 +19,7 @@
 #include <string>
 #include "cp/core/scalar_traits.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 template <class Traits = default_scalar_traits>
 class basic_interval {
@@ -133,4 +135,4 @@ public:
 
 using interval = basic_interval<default_scalar_traits>;
 
-} // namespace ECFlow
+} // namespace EvoFlow

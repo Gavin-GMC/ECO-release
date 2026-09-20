@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 个体数组 IndividualArray(旧名 Population):管理一组同型候选解个体(容量/大小分离,类 vector)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -15,7 +10,7 @@
 #include "individual.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class IndividualArray
     {
@@ -23,6 +18,7 @@ namespace ECFlow
         int          _individual_buffer_size;
         int          _population_size;
         Individual** _individuals;
+        // v1.4.8:**删除 _individual_type_name** —— 它是只写不读的死字段(newArray 从不读它,
         //   个体只剩基类、Registry<Individual> 已移除)。留着等于让调用方以为"类型名有用"。
         std::vector<FeatureSpec> _feature_spec;   // INDIV-COMPOSE 路径:非空则造基类+挂推断特性
 
@@ -60,7 +56,7 @@ namespace ECFlow
             _individuals = newArray(0);       // 长度 0 的数组(非 nullptr)
         }
 
-        // 无推断特性:只造基类。,但 type_name 从不被读 → 已删)
+        // 无推断特性:只造基类。(v1.4.8:原签名为 (type_name, size),但 type_name 从不被读 → 已删)
         explicit IndividualArray(int size)
         {
             _individual_buffer_size = size;

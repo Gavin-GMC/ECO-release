@@ -1,22 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // SubpopulationConstructer:子种群"构建/重构"策略基类——把全体个体(重新)划分到各子种群。
 //   ini() 默认即 build();由 SubpopulationManager 在 ini/update 时调用。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "subpopulation.h"
 #include "parameter-template.h"
 #include "registry.h"
-#include "ecflow-math.h"        // eu_distance
-#include "ecflow-constant.h"    // ECFLOW_MAX
+#include "evoflow-math.h"        // eu_distance
+#include "evoflow-constant.h"    // EVOFLOW_MAX
 
-namespace ECFlow
+namespace EvoFlow
 {
     class SubpopulationConstructer
     {
@@ -76,7 +71,7 @@ namespace ECFlow
                 int dim = best->getSolutionSize();
 
                 // 方案 A 哨兵初始化:distance=MAX,belong/index 缺省指向本群自身第 j 个
-                for (int j = 0; j < subswarm_size; j++) { distance[j] = ECFLOW_MAX; belong[j] = i; index[j] = j; }
+                for (int j = 0; j < subswarm_size; j++) { distance[j] = EVOFLOW_MAX; belong[j] = i; index[j] = j; }
 
                 // Top-k:离 best 最近的 subswarm_size 个 (subpop,slot)
                 for (int j = i; j < swarm_number; j++)
@@ -182,7 +177,7 @@ namespace ECFlow
             [](const double*) -> SubpopulationConstructer* { return new FitnessConstructer(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(scon_fixed,    SubpopulationConstructer, fixedConstructerEntry());
-    ECFLOW_REGISTER(scon_distance, SubpopulationConstructer, distanceConstructerEntry());
-    ECFLOW_REGISTER(scon_fitness,  SubpopulationConstructer, fitnessConstructerEntry());
+    EVOFLOW_REGISTER(scon_fixed,    SubpopulationConstructer, fixedConstructerEntry());
+    EVOFLOW_REGISTER(scon_distance, SubpopulationConstructer, distanceConstructerEntry());
+    EVOFLOW_REGISTER(scon_fitness,  SubpopulationConstructer, fitnessConstructerEntry());
 }

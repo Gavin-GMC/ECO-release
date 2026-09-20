@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/domain/variable_domain.h
 //
@@ -17,7 +19,7 @@
 #include "cp/core/interval_set.h"
 #include "cp/compile/program.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 class State {
 public:
@@ -163,10 +165,10 @@ private:
                 break;
             default: break;
         }
-        if (can_false) r.add_interval(ECFlow::interval(0, 0));
-        if (can_true)  r.add_interval(ECFlow::interval(1, 1));
+        if (can_false) r.add_interval(EvoFlow::interval(0, 0));
+        if (can_true)  r.add_interval(EvoFlow::interval(1, 1));
         return r;
     }
 };
 
-} // namespace ECFlow
+} // namespace EvoFlow

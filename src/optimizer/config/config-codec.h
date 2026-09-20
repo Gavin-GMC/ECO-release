@@ -1,14 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 配置文件编解码。FullConfig(workflows + OptimizerConfig)⇄ 文本。
-//-------------------------Reference-------------------------
-// 全新设计(非迁移);格式对应 configure-list.h 的结构。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -17,9 +10,9 @@
 #include <iomanip>
 #include <cmath>
 #include "configure-list.h"
-#include "ecflow-constant.h"   // EMPTYVALUE / is_empty:未设置参数需跨越序列化边界
+#include "evoflow-constant.h"   // EMPTYVALUE / is_empty:未设置参数需跨越序列化边界(v3.1 印 nan、v3.2 印 null)
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 序列化单元:一份完整配置 = 若干 workflow + 一个 optimizer(含子群/协作/全局档案)
     struct FullConfig
@@ -59,6 +52,8 @@ namespace ECFlow
         // ⚠ EMPTYVALUE(=quiet_NaN)走**下面这条**分支印成 "nan":`std::floor(NaN)==NaN` 为**假**(NaN 自比较恒假),
         //   恰好短路掉 `(long long)NaN` —— 那是 **UB**。该短路是"碰巧正确"而非设计,**不得**把上面的判断
         //   "优化"成任何会让 NaN 落进整数分支的形式(如先判 fabs、或改用 std::trunc/位运算等)。
+        //   v3.1 文本:"nan" 可由 std::stod 原样读回(已由 smoke-config-emptyvalue 守住)。
+        //   v3.2 JSON:**裸 nan 不是合法 JSON** → JSON 侧不得直接用本函数印未设置值,须走 ConfigCodecV32::jsonNum(印 null)。
         inline std::string num(double v)
         {
             if (std::floor(v) == v && std::fabs(v) < 1e15)
@@ -109,7 +104,7 @@ namespace ECFlow
             o << "name " << op.name << "\n";
             o << "tag " << op.tag << "\n";
             o << "terminator " << op.terminate_conditions[0] << " " << op.terminate_conditions[1] << " " << op.terminate_conditions[2] << "\n";
-            o << "logging " << (op.logger_full_result ? 1 : 0) << " " << (op.logger_process ? 1 : 0) << " " << (op.logger_full_process ? 1 : 0) << "\n";
+            o << "logging " << (op.logger_full_result ? 1 : 0) << " " << (op.logger_process ? 1 : 0) << " " << (op.logger_full_process ? 1 : 0) << " " << (op.logger_swarm ? 1 : 0) << "\n";
             o << "manager " << op.cooperation.manager_tag; codec::appendPara(o, op.cooperation.manager_para); o << "\n";
             o << "constructer " << op.cooperation.constructer_tag; codec::appendPara(o, op.cooperation.constructer_para); o << "\n";
             o << "ctopology " << op.cooperation.topology_tag; codec::appendPara(o, op.cooperation.topology_para); o << "\n";
@@ -167,7 +162,12 @@ namespace ECFlow
                     if (key == "name")            op.name = (tk.size() > 1) ? tk[1] : "";
                     else if (key == "tag")        op.tag  = (tk.size() > 1) ? tk[1] : "";
                     else if (key == "terminator") { op.terminate_conditions[0] = std::stoi(tk[1]); op.terminate_conditions[1] = std::stoi(tk[2]); op.terminate_conditions[2] = std::stoi(tk[3]); }
-                    else if (key == "logging")    { op.logger_full_result = tk[1] != "0"; op.logger_process = tk[2] != "0"; op.logger_full_process = tk[3] != "0"; }
+                    // v2.2.2.3:加长度守卫。原为直接下标 tk[1..3] —— 截断的 `logging 0 0` 即越界(现存 bug,非本批引入);
+                    //   且 3 值→4 值扩展后,97 个既有 3 值配置必须仍能读(缺项取默认 false)。
+                    else if (key == "logging")    { op.logger_full_result  = (tk.size() > 1) && tk[1] != "0";
+                                                    op.logger_process      = (tk.size() > 2) && tk[2] != "0";
+                                                    op.logger_full_process = (tk.size() > 3) && tk[3] != "0";
+                                                    op.logger_swarm        = (tk.size() > 4) && tk[4] != "0"; }
                     else if (key == "manager")    codec::readTagPara(tk, 1, op.cooperation.manager_tag, op.cooperation.manager_para);
                     else if (key == "constructer")codec::readTagPara(tk, 1, op.cooperation.constructer_tag, op.cooperation.constructer_para);
                     else if (key == "ctopology")  codec::readTagPara(tk, 1, op.cooperation.topology_tag, op.cooperation.topology_para);

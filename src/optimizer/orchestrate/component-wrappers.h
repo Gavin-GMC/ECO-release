@@ -1,14 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // O_Component 包装(6 个):把已迁纯算子桥接进 workflow。注入型 Set***(SET 进上下文)/ 执行型 Run***(调算子方法 + 队列编排)。
-//-------------------------Reference-------------------------
-//   Run*** 由原 EnvirSelect::run / Evaluator::run / OffspringGenerator::run 的 run() 体抽出(算子本体已迁,此处为其 O_Component 适配)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "optimize-component.h"
@@ -16,7 +9,7 @@
 #include "evaluator.h"
 #include "generator.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // ============ 注入型 Set*** ============
 

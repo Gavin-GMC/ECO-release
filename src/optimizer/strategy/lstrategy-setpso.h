@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 集合式速度驱动学习策略 SetVelocityDrivenStrategy:基于集合算子把粒子群扩展到离散/组合空间——
 //   速度=选择对的集合(SetVelocity),位置更新经速度"清晰化"(概率选择 + 排序 + 约束/启发兜底)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <algorithm>
 #include <functional>
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "individual.h"
 #include "feature-setvelocity.h"   // INDIV-COMPOSE S4:setvelocity 特性(取代 SetParticle 成员)
 #include "learning-strategy.h"
 #include "registry.h"
+#include "terminator.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class SetVelocityDrivenStrategy : public LearningStrategy
     {
@@ -29,7 +25,7 @@ namespace ECFlow
 
         double _w_ini;
         double _w;
-        double _w_attenuation;
+        double _w_final;
 
         bool v_heuristic;
         bool f_heuristic;
@@ -91,10 +87,9 @@ namespace ECFlow
                         va = _c[i] * rand01_();
                         for (int i = 0; i < variable_size; i++)
                         {
-                            if (!is_empty(example[2 * i]))   // 修复:原 != EMPTYVALUE(NaN)恒真
+                            if (svf->velocity[vid]->tryChoice2Cid(example[2 * i], cid1) &&
+                                svf->velocity[vid]->tryChoice2Cid(example[2 * i + 1], cid2))
                             {
-                                cid1 = svf->velocity[vid]->choice2Cid(example[2 * i]);
-                                cid2 = svf->velocity[vid]->choice2Cid(example[2 * i + 1]);
                                 svf->velocity[vid]->addToVelocity(cid1, cid2, va);
                             }
                         }
@@ -116,9 +111,9 @@ namespace ECFlow
                         va = _c[i] * rand01_();
                         for (int i = 0; i < variable_size; i++) // task
                         {
-                            if (!is_empty(object_pointer[i]) && solution_pointer[i] != object_pointer[i])   // 修复:原 != EMPTYVALUE
+                            if (solution_pointer[i] != object_pointer[i] &&
+                                svf->velocity[vid]->tryChoice2Cid(object_pointer[i], cid))
                             {
-                                cid = svf->velocity[vid]->choice2Cid(object_pointer[i]);
                                 if (va > svf->velocity[vid]->getVelocityRate(i, cid))
                                 {
                                     svf->velocity[vid]->addToVelocity(i, cid, va);
@@ -139,8 +134,10 @@ namespace ECFlow
             double back;
 
             counter = 0;
+            const bool valid_base = velocity && decision_base >= 0 && decision_base < velocity->demension;
+
             // velocity crisp
-            for (int i = 0; i < velocity->velocityIndex_Size[decision_base]; i++)
+            for (int i = 0; valid_base && i < velocity->velocityIndex_Size[decision_base]; i++)
             {
                 int offset = decision_base * velocity->choice;
                 choiceid = velocity->velocityIndex[offset + i];
@@ -164,38 +161,41 @@ namespace ECFlow
                 }
             }
 
-            // position crisp
-            double current_decision = EMPTYVALUE;
-            if (velocity->pre_base)
+            // position crisp:当前位置为空时不复用原位置,直接进入 full crisp
+            if (valid_base && !is_empty(current_position[demension]))
             {
-                // 获得当前决策
-                double pre_decision = velocity->cid2Choice(decision_base);
-                int vid = handle->getBelongVariableId(demension);
-                int variable_offset = handle->getVariableOffset(vid);
-                int variable_size = handle->getVariableLength(vid);
-
-                double* current_results = current_position + variable_offset;
-                for (int i = 0; i < variable_size; i++)
+                double current_decision = EMPTYVALUE;
+                if (velocity->pre_base)
                 {
-                    if (equal(current_results[i], pre_decision))
-                    {
-                        if (i == variable_size - 1)
-                            current_decision = current_results[0];
-                        else
-                            current_decision = current_results[i + 1];
+                    // 获得当前决策
+                    double pre_decision = velocity->cid2Choice(decision_base);
+                    int vid = handle->getBelongVariableId(demension);
+                    int variable_offset = handle->getVariableOffset(vid);
+                    int variable_size = handle->getVariableLength(vid);
 
-                        break;
+                    double* current_results = current_position + variable_offset;
+                    for (int i = 0; i < variable_size; i++)
+                    {
+                        if (equal(current_results[i], pre_decision))
+                        {
+                            if (i == variable_size - 1)
+                                current_decision = current_results[0];
+                            else
+                                current_decision = current_results[i + 1];
+
+                            break;
+                        }
                     }
                 }
-            }
-            else
-            {
-                current_decision = current_position[demension];
-            }
+                else
+                {
+                    current_decision = current_position[demension];
+                }
 
-            if (!is_empty(current_decision) && handle->constrainCheck(demension, current_decision))   // 修复:原 != EMPTYVALUE
-            {
-                return current_decision;
+                if (!is_empty(current_decision) && handle->constrainCheck(demension, current_decision))   // 修复:原 != EMPTYVALUE
+                {
+                    return current_decision;
+                }
             }
 
             // full crisp
@@ -217,7 +217,7 @@ namespace ECFlow
         {
             return { { "setvelocity", "setvelocity", FeatureScope::Private, {} } };
         }
-        SetVelocityDrivenStrategy(int object_number = 2, double c = 2, double w_ini = 0.9, bool v_heuristic = true, bool f_heuristic = true, double w_attenuation = EMPTYVALUE)
+        SetVelocityDrivenStrategy(int object_number = 2, double c = 2, double w_ini = 0.9, bool v_heuristic = true, bool f_heuristic = true, double w_final = EMPTYVALUE)
             : LearningStrategy()
         {
             _object_number = object_number;
@@ -227,13 +227,13 @@ namespace ECFlow
 
             _w = 0;
             _w_ini = w_ini;
-            _w_attenuation = w_attenuation;
+            _w_final = w_final;
             this->v_heuristic = v_heuristic;
             this->f_heuristic = f_heuristic;
             sortbuffer = nullptr;
         }
 
-        SetVelocityDrivenStrategy(int object_number, double* c, double w_ini = 0.9, bool v_heuristic = true, bool f_heuristic = true, double w_attenuation = EMPTYVALUE)
+        SetVelocityDrivenStrategy(int object_number, double* c, double w_ini = 0.9, bool v_heuristic = true, bool f_heuristic = true, double w_final = EMPTYVALUE)
             : LearningStrategy()
         {
             _object_number = object_number;
@@ -242,7 +242,7 @@ namespace ECFlow
 
             _w = 0;
             _w_ini = w_ini;
-            _w_attenuation = w_attenuation;
+            _w_final = w_final;
             this->v_heuristic = v_heuristic;
             this->f_heuristic = f_heuristic;
             sortbuffer = nullptr;
@@ -257,7 +257,7 @@ namespace ECFlow
         static void preAssert(AssertList& list, double* paras)
         {
             // setvelocity 需求已移入 featureDemands()(INDIV-COMPOSE),不再经个体断言
-            list.add(new Assert(ModuleType::T_learntopology, "objects", 1, MatchType::notLess));
+            list.add(new Assert(ModuleType::T_learntopology, "objects", int(paras[0]), MatchType::notLessButNotice));
         }
         static void postAssert(AssertList& list, double* paras) { list.add(new Assert(ModuleType::T_learnstrategy, "constructive", 1, MatchType::postAssert)); }
 
@@ -269,12 +269,17 @@ namespace ECFlow
             sortbuffer = new sortHelper<int, double>[problem_handle->getProblemSize()];
         }
 
-        void preparation_s(IndividualArray& population, Terminator*) override
+        void preparation_s(IndividualArray& population, Terminator* terminator) override
         {
-            if (is_empty(_w_attenuation))    // 未设 → 随机惯性(修复:原 == EMPTYVALUE 恒假)
+            if (is_empty(_w_final))
                 _w = rand01_();
             else
-                _w -= _w_attenuation;
+            {
+                double progress = terminator ? terminator->getProgress() : 0.0;
+                if (progress < 0.0) progress = 0.0;
+                if (progress > 1.0) progress = 1.0;
+                _w = _w_ini + (_w_final - _w_ini) * progress;
+            }
         }
 
         void preparation_i(Individual* individual, Solution** learning_object, Individual* child) override
@@ -297,10 +302,9 @@ namespace ECFlow
             {
                 // 变量内维度
                 int did = problem_handle->getWithinVariableId(decision_d);
-                if (did == 0 || is_empty(child->solution[decision_d - 1]))   // 修复:原 == EMPTYVALUE
-                    decision_base = ECFlow::get_int(0, velocity->choice - 1);  // 修复:原 rand()%choice
-                else
-                    decision_base = velocity->choice2Cid(child->solution[decision_d - 1]);
+                if (did == 0 ||
+                    !velocity->tryChoice2Cid(child->solution[decision_d - 1], decision_base))
+                    decision_base = EvoFlow::get_int(0, velocity->choice - 1);  // 修复:原 rand()%choice
             }
             else
             {
@@ -319,7 +323,7 @@ namespace ECFlow
                                  {"w_ini",         ParamKind::Real, 0.0, 1.0,      false, 0.4, 0.9},
                                  {"v_heuristic",   ParamKind::Enum, 0, 1,          false, 0, 1},
                                  {"f_heuristic",   ParamKind::Enum, 0, 1,          false, 0, 1},
-                                 {"w_attenuation", ParamKind::Real, 0.0, 1.0,      true,  0.0, 0.1} } }, sizeof(SetVelocityDrivenStrategy),
+                                 {"w_final",       ParamKind::Real, 0.0, 1.0,      true,  0.2, 0.9} } }, sizeof(SetVelocityDrivenStrategy),
             [](const double* p) -> LearningStrategy* {
                 return p ? new SetVelocityDrivenStrategy(int(p[0]), p[1], p[2], p[3] != 0, p[4] != 0, p[5])
                          : new SetVelocityDrivenStrategy();
@@ -327,5 +331,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { SetVelocityDrivenStrategy::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { SetVelocityDrivenStrategy::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_setvelocitydriven, LearningStrategy, setVelocityDrivenStrategyEntry());
+    EVOFLOW_REGISTER(lstrat_setvelocitydriven, LearningStrategy, setVelocityDrivenStrategyEntry());
 }

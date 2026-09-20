@@ -1,17 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 烟花算法(FWA)两个策略:
 //   ExplosionSpark —— 爆炸火花:好烟花幅度小(精细)、差烟花幅度大(探索);随机选若干维,在 ±A_i 内均匀位移。
 //   GaussianSpark  —— 高斯火花:随机选若干维乘以 g~N(1,1),沿过原点射线缩放,增多样性。
+
 //-------------------------Reference-------------------------
 // Y. Tan, Y. Zhu, "Fireworks Algorithm for Optimization," ICSI 2010, LNCS 6145, pp. 355-364,
 // doi: 10.1007/978-3-642-13495-1_44.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
@@ -22,10 +18,10 @@
 #include "individual-array.h"
 #include "problem-handle.h"
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 爆炸火花:幅度∝适应度差,随机维均匀位移
     class ExplosionSpark : public LearningStrategy
@@ -144,6 +140,6 @@ namespace ECFlow
             [](AssertList& L, const double* p) { GaussianSpark::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { GaussianSpark::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_explosionspark, LearningStrategy, explosionSparkEntry());
-    ECFLOW_REGISTER(lstrat_gaussianspark,  LearningStrategy, gaussianSparkEntry());
+    EVOFLOW_REGISTER(lstrat_explosionspark, LearningStrategy, explosionSparkEntry());
+    EVOFLOW_REGISTER(lstrat_gaussianspark,  LearningStrategy, gaussianSparkEntry());
 }

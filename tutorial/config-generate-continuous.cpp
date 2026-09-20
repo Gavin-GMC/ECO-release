@@ -1,7 +1,7 @@
-﻿//------------------------Description------------------------
-//   用 ConfigBuilder/WorkflowSetter fluent 装配 → ConfigBuilder::saveConfig 落 v3.1 文本配置表 → config/<name>.cfg,
+//------------------------Description------------------------
 //   并 encode→decode round-trip 无损 + AssertMatcher 静态自检。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #include <cstdio>
 #include <string>
@@ -9,11 +9,11 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
-#include "ecflow.h"
+#include "evoflow.h"
 #include "config-setter.h"
 #include "config-codec.h"
 #include "assert-matcher.h"
-using namespace ECFlow;
+using namespace EvoFlow;
 
 static const std::string OUTDIR = "config";
 static const int MAXFES = 100000;
@@ -125,7 +125,7 @@ int main()
         w.selector.index(false);
     });
 
-    // ============ EDA 新分布模型:DistributionEstimation 的 model 从 Gaussian 扩到 Cauchy/Uniform/Histogram ============
+    // ============ EDA 新分布模型(v3.11.5):DistributionEstimation 的 model 从 Gaussian 扩到 Cauchy/Uniform/Histogram ============
     // 逐维单变量分布(objects=0,Isolate);good_number 缺省(NA)→按 good_rate 取好解;仅 model 不同。
     const char* eda_names[3] = { "eda_cauchy", "eda_uniform", "eda_histogram" };
     const int   eda_models[3] = { 2, 3, 4 };   // 2 Cauchy / 3 Uniform / 4 Histogram
@@ -148,6 +148,171 @@ int main()
         w.topology.topRanked(3);
         w.repair.boundary();
         w.strategy.greyWolfEncircling(2.0, 0.0);   // a_max=2, a_min=0(标准 GWO)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ SCA(正弦余弦,连续):TopRanked(1,当代最优) + 振幅 r1 随进度衰减 ============
+    gen("sca", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(1);
+        w.repair.boundary();
+        w.strategy.sineCosineOscillation(2.0);   // a=2(标准 SCA)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ AOA(四则运算,连续):TopRanked(1,当代最优) + MOA递增/MOP递减进度门控 ============
+    gen("aoa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(1);
+        w.repair.boundary();
+        w.strategy.arithmeticOperatorUpdate(5.0, 0.2, 1.0, 0.5);   // 标准 AOA:alpha=5, MOA∈[0.2,1], mu=0.5
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ RSA(爬行动物搜索,连续):LeaderRandomCenter(最优+随机+中心) + 4 相位包围/狩猎 ============
+    gen("rsa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.leaderRandomCenter();
+        w.repair.boundary();
+        w.strategy.reptileEncircling(0.1, 0.1);   // 标准 RSA:alpha=beta=0.1
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ GJO(金豺优化,连续):TopRanked(2,雌雄双豺) + 能量 E 衰减 + Levy 飞行 ============
+    gen("gjo", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(2);
+        w.repair.boundary();
+        w.strategy.goldenJackalPincer(1.5, 1.5);   // 标准 GJO:c1=1.5, Levy beta=1.5
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ TSA(海鞘群,连续):TopRanked(1,食物源) + 喷射推进 + 群聚阻尼(无进度衰减) ============
+    gen("tsa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(1);
+        w.repair.boundary();
+        w.strategy.tunicateJetSwarm(1.0, 4.0);   // 标准 TSA:Pmin=1, Pmax=4
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ MPA(海洋捕食者,连续):LeaderTwoRandom(最优+两随机) + 3 相位 Brownian/Levy + FADs ============
+    gen("mpa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.leaderTwoRandom();
+        w.repair.boundary();
+        w.strategy.marinePredatorMotion(0.5, 0.2);   // 标准 MPA:P=0.5, FADs=0.2
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ AO(天鹰优化,连续):LeaderRandomCenter(最优+随机+中心) + 4 method 相位切换 + Levy + 螺旋 ============
+    gen("aquila", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.leaderRandomCenter();
+        w.repair.boundary();
+        w.strategy.aquilaHunt();   // 标准 AO(alpha/delta=0.1,螺旋常数默认)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ SMA(黏菌,连续):LeaderTwoRandom(最优+两随机) + 适应度权重 W + 振荡 vb/vc ============
+    gen("sma", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.leaderTwoRandom();
+        w.repair.boundary();
+        w.strategy.slimeMouldOscillation(0.03);   // 标准 SMA:z=0.03
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ EO(平衡优化器,连续):TopRanked(4,平衡池前 4) + 指数质量平衡 ============
+    gen("eo", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(4);
+        w.repair.boundary();
+        w.strategy.equilibriumUpdate();   // 标准 EO(a1=2, a2=1, GP=0.5, V=1)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ AVOA(非洲秃鹫,连续):TopRanked(2,两领头) + 饱食率 F 分相位多分支 + 螺旋 + Levy ============
+    gen("avoa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(2);
+        w.repair.boundary();
+        w.strategy.vultureForaging();   // 标准 AVOA(L1=0.8,P1/P2/P3=0.6/0.4/0.6,ω=2.5)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ BWO(白鲸优化,连续):LeaderAndRandom(最优+随机) + 游动(跨维)/捕食(Levy)/鲸落 三相 ============
+    gen("bwo", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.leaderAndRandom();
+        w.repair.boundary();
+        w.strategy.belugaWhalePhases();   // 标准 BWO(wf 0.1→0.05, B0∈[0,1])
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ INFO(加权均值向量,连续):两段——RankExtremesTriRandom+更新 → Continue…+局搜 ============
+    gen("info", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.rankExtremesTriRandom();
+        w.repair.boundary();
+        w.strategy.weightedMeanUpdate(); w.generator.generation();                                              // 段A:更新规则+向量组合
+        w.topology.continueRankExtremesTriRandom(); w.strategy.weightedMeanLocalSearch(); w.generator.generation(true);   // 段B:加权均值局搜(续接)
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ SSA(海鞘群,连续):SalpChain(食物+前一只) + 领导跟食物/跟随链式平均 ============
+    gen("ssa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.salpChain();
+        w.repair.boundary();
+        w.strategy.salpChainUpdate(2.0, 4.0);   // 标准 SSA:c1=2·e^(−(4p)²)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ GOA(蝗虫优化,连续):TopRanked(1,目标) + 全群两两社会力 O(n²) ============
+    gen("goa", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.topRanked(1);
+        w.repair.boundary();
+        w.strategy.grasshopperSwarm();   // 标准 GOA(f=0.5, l=1.5, c_max=1, c_min=4e-5)
+        w.generator.generation();
+        w.evaluator.basic();
+        w.selector.rank();
+    });
+
+    // ============ DBO(蜣螂优化,连续):DungBeetleRefs(全局/当代最优+最差) + 四角色 ============
+    gen("dbo", SIZE, [](WorkflowSetter& w) {
+        w.initializer("Random");
+        w.topology.dungBeetleRefs();
+        w.repair.boundary();
+        w.strategy.dungBeetleRoles();   // 标准 DBO(k=.1,b=.3,S=.5,比例 .2/.2/.233/余)
         w.generator.generation();
         w.evaluator.basic();
         w.selector.rank();

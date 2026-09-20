@@ -1,28 +1,24 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 配偶选择类学习拓扑三种(GA 常用):
 //   Roulette   轮盘赌 / 适应度比例选择。
 //   Tournament 锦标赛 / 竞赛选择(原类名 Championship)。
 //   Uniform    均匀随机选择。
 // 三者均成对产边:选出的一对个体互为学习对象(+ 若干额外对象)。
+
 //-------------------------Reference-------------------------
 // [1] D. E. Goldberg and K. Deb, "A Comparative Analysis of Selection Schemes Used in Genetic
 //     Algorithms," in Foundations of Genetic Algorithms, G. Rawlins, Ed. San Francisco, CA, USA:
 //     Morgan Kaufmann, 1991, pp. 69-93.(涵盖 proportionate/轮盘赌 与 tournament;Uniform 为基础基线)
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include "ecflow-constant.h"
-#include "ecflow-rand.h"
+#include "evoflow-constant.h"
+#include "evoflow-rand.h"
 #include "learning-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 单目标单种群轮盘赌选择
     class Roulette : public LearningTopology
@@ -80,7 +76,7 @@ namespace ECFlow
 
             // 统计最大最小 fitness[0](内建"最小化"假设,见 ROULETTE-DIR)
             double max = -1;
-            double min = ECFLOW_MAX;
+            double min = EVOFLOW_MAX;
             for (int i = 0; i < graph_size; i++)
             {
                 if (max < cswarm[0][i].solution.fitness[0])
@@ -108,7 +104,7 @@ namespace ECFlow
             for (int i = 0; i < graph_size; i++)
                 _dart_board[i] /= total;
 
-            // 轮盘赌(rand01 = ECFlow 引擎,可复现)
+            // 轮盘赌(rand01 = EvoFlow 引擎,可复现)
             double p0 = rand01();
             int id = 0;
             int counter = 0;
@@ -206,10 +202,10 @@ namespace ECFlow
                 // 锦标赛
                 for (int i = 0; i < _objects_number + 1; i++)
                 {
-                    winner = ECFlow::get_int(0, graph_size - 1);
+                    winner = EvoFlow::get_int(0, graph_size - 1);
                     for (int j = 1; j < _competition_scale; j++)   // 内层改名 j(原遮蔽外层 i)
                     {
-                        challenger = ECFlow::get_int(0, graph_size - 1);
+                        challenger = EvoFlow::get_int(0, graph_size - 1);
                         if ((*cswarm)[challenger] < (*cswarm)[winner])
                             winner = challenger;
                     }
@@ -289,7 +285,7 @@ namespace ECFlow
             {
                 // 均匀选取
                 for (int i = 0; i < _objects_number + 1; i++)
-                    _id_list[i] = ECFlow::get_int(0, graph_size - 1);
+                    _id_list[i] = EvoFlow::get_int(0, graph_size - 1);
 
                 // 插入拓扑图
                 s1 = &cswarm[0][_id_list[0]];
@@ -348,7 +344,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { Uniform::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { Uniform::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_roulette,   LearningTopology, rouletteTopologyEntry());
-    ECFLOW_REGISTER(ltopo_tournament, LearningTopology, tournamentTopologyEntry());
-    ECFLOW_REGISTER(ltopo_uniform,    LearningTopology, uniformTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_roulette,   LearningTopology, rouletteTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_tournament, LearningTopology, tournamentTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_uniform,    LearningTopology, uniformTopologyEntry());
 }

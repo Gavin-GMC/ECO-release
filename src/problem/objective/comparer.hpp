@@ -1,19 +1,14 @@
-﻿//------------------------Description------------------------
-// This file defines the solution comparer in ECFlow. They support
+//------------------------Description------------------------
+// This file defines the solution comparer in EvoFlow. They support
 // candidate solution comparison considering target priority.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 ���������ƣ���ȷ�ϣ�, All Rights Reserved.
-// You are free to use the ECFlow����ȷ�ϣ� for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference 
-// "δȷ��"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include"ecflow-basicfunc.h"
+#include"evoflow-basicfunc.h"
 #include"objective.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
 	class Comparer
 	{

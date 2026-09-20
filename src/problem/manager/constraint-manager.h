@@ -1,22 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // ConstraintManager:ConstrainDefine::compile() 的产物——约束域运行期引擎(原扁平句柄的约束切片)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <cstring>
-#include "ecflow-constrain.h"
-#include "ecflow-accumulate.h"   // ConstrainCapacity + accumulate constraints
-#include "ecflow-constant.h"        // EMPTYVALUE
+#include "evoflow-constrain.h"
+#include "evoflow-accumulate.h"   // ConstrainCapacity + accumulate constraints
+#include "evoflow-constant.h"        // EMPTYVALUE
 #include "variable-manager.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     struct Con4ElePair { std::vector<Constrain*> constrains; };
 
@@ -74,6 +69,7 @@ namespace ECFlow
 
         void constrainChange(const VariableManager& var, int demensionId, double value)
         {
+            if (is_empty(value)) return;   // 未决定的维不更新约束状态,也不收缩后续可行域
             int vid = var.solution_belong_variable[demensionId];
             int dvi = var.variable_map_index[vid];
             int did = demensionId - var.decision_variable_offset[dvi];
@@ -118,7 +114,7 @@ namespace ECFlow
             return back;
         }
 
-        // 违反度 = 全部已注册约束的**原始** violation 之和(不乘权重、不看目标绑定)。与原版 ECFlow 逐行等价。
+        // 违反度 = 全部已注册约束的**原始** violation 之和(不乘权重、不看目标绑定)。与原版 EvoFlow 逐行等价。
         //   语义详见 ProblemHandle::constraintViolation 的注释(两条约束通路的分工 / 变量域为何计入)。
         double constraintViolation(const VariableManager& var)
         {
@@ -130,7 +126,7 @@ namespace ECFlow
             return back;
         }
 
-        // 合法性 = **或逻辑短路**:撞到第一条违反即返回,不再计算其余约束(与原版 ECFlow 同构)。
+        // 合法性 = **或逻辑短路**:撞到第一条违反即返回,不再计算其余约束(与原版 EvoFlow 同构)。
         //   不写成 `equal(constraintViolation(var), 0)` —— 那样虽在 violation 恒非负时等价,却**总要算完全部约束**;
         //   非法解常在头几条即可判定,短路省去其余计算(约束越多、越早违反,收益越大)。
         bool solutionLegality(const VariableManager& var)
@@ -146,7 +142,7 @@ namespace ECFlow
         }
 
         // 取某维当前的域视图(须在 ensureDem 之后)。
-        // ★ **全平台唯一的"变量类型 → 视图模式"分派点**。视图本身不认识 VariableType,
+        // ★ **全平台唯一的"变量类型 → 视图模式"分派点**(v1.4.7)。视图本身不认识 VariableType,
         //   调用方(优化器)也不感知模式 —— 它们只调 getRandomChoiceInspace / getFeasibleList 等,
         //   由本函数决定这些操作是按**网格**还是按**测度**解释。
         domain_view demView(const VariableManager& var, int dim)
@@ -161,7 +157,7 @@ namespace ECFlow
         // 变量类型 → 视图模式(转发到 domain_view.h 的自由函数,勿在别处硬写 mode)
         static ViewMode viewModeOf(const VariableManager& var, int vid)
         {
-            return ECFlow::viewModeOf(var.getVariableType(vid));
+            return EvoFlow::viewModeOf(var.getVariableType(vid));
         }
 
         // 把值吸附到该维的网格/输出精度(供 ProblemHandle::choiceDiscretized;生成器每写一个决策都经此)。

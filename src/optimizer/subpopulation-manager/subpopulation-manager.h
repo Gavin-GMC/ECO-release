@@ -1,19 +1,16 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // SubpopulationManager:顶层 Population 内的子种群管理器基类 —— **定义子种群交互的方式**,并作为
 //   **驱动者**调用另外两个种群级组件(构建器 = 个体如何形成子种群;拓扑 = 子种群交互的拓扑)。
 //   负责 ini(初始化各子群 + 建拓扑邻居 + 注入)、runEpoch(跑一轮)、全局最优汇集、终止器协作。
 // ★ 模板方法:ini/runEpoch 是**非虚的框架固定时序**,终止器协作与预算记账由基类包办;
 //   子类只覆写钩子 interact()/iniHook()。setProblem/globalOptimumCollection 保持 virtual
 //   (二者尚无框架骨架可言,去虚只会净损可拓展性)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
+#include <vector>   // v2.5.4.3:预分份额
+#include "subpop-resource-manager.h"   // v2.5.4.4:线程分配器
 #include "subpopulation.h"
 #include "subpopulation-constructer.h"
 #include "subpopulation-topology.h"
@@ -21,7 +18,7 @@
 #include "terminator.h"
 #include "parameter-template.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class SubpopulationManager
     {
@@ -32,8 +29,9 @@ namespace ECFlow
         Terminator*               _terminator_pointer;
         Terminator**              _subterminator_pointers;
         int                       _swarm_number;
+        SubpopResourceManager     _resmgr;   // v2.5.4.4:并行 run pass 的线程分配器(归属 manager)
 
-        // —— 子类扩展点(钩子)——
+        // —— 子类扩展点(钩子)——(v1.4.8)
         //   ★ 为何是钩子而非让子类覆写整段时序:原设计里 update() 是纯虚,作者在其中以注释列出三段职责
         //     ——「更新种群结构」「种群交互」「更新终止条件」—— 而**四个子类中只有 SingleSwarm 写了第三段**,
         //     另外三个的终止器协作彻底缺失(实测:NoInteraction 下全局预算完全失效,真实评估 = 子群数 x 每轮预算)。
@@ -95,6 +93,32 @@ namespace ECFlow
             _terminator_pointer = terminator;
         }
 
+        // per-子群 RNG 播种(2.5.2):Optimizer 在 exe 播全局种子后调用一次。
+        //   各子群按序号 i 派生确定性种子(seedEngine),引擎跨代延续、不在 ini/runEpoch 里重播 ——
+        //   故 exe(n) 的 n 次运行仍是同一引擎的连续流(保持改造前"多次采样"语义)。
+        //   单子群(i=0)与改造前逐位一致;多子群改为各自独立可复现的流。
+        void seedEngines(unsigned int base_seed)
+        {
+            for (int i = 0; i < _swarm_number; i++)
+                _subpopulations[i]->seedEngine(base_seed, i);
+        }
+
+        // v2.5.3:开各子群本轮的子群级过程文件(Optimizer::ini 扇出;照 setProblem 扇出范式)。
+        void newProcessLog(int exe_counter)
+        {
+            for (int i = 0; i < _swarm_number; i++)
+                _subpopulations[i]->newProcessLog(exe_counter);
+        }
+
+        void setCancellationCheck(const std::function<bool()>& check)
+        {
+            if (_terminator_pointer)
+                _terminator_pointer->setCancellationCheck(check);
+            for (int i = 0; i < _swarm_number; i++)
+                if (_subterminator_pointers[i])
+                    _subterminator_pointers[i]->setCancellationCheck(check);
+        }
+
         virtual void globalOptimumCollection(BestArchive* global_archive)
         {
             Solution* bests;
@@ -137,7 +161,7 @@ namespace ECFlow
                 _subpopulations[i]->setProblem(problem_handle);
         }
 
-        // ★ 框架固定时序,**非虚**:预算记账不得被子类改写或遗漏;子类的额外初始化走 iniHook()。
+        // ★ 框架固定时序,**非虚**(v1.4.8):预算记账不得被子类改写或遗漏;子类的额外初始化走 iniHook()。
         void ini()
         {
             // 初始种群:**逐子群闭环**(设限 → 初始化 → 立刻并账 → 清零)。
@@ -163,7 +187,7 @@ namespace ECFlow
             iniHook();
         }
 
-        // ★ 框架固定时序,**非虚**。一"轮"(epoch)= 交互 → 拓扑维护 → 逐子群(配额 → 跑 → 并账)。
+        // ★ 框架固定时序,**非虚**(v1.4.8)。一"轮"(epoch)= 交互 → 拓扑维护 → 逐子群(配额 → 跑 → 并账)。
         //   子群终止器装的是**每轮预算**(epoch),全局终止器装的是**总预算**;每轮由 limited 取
         //   min(每轮预算, 全局剩余) 下发配额 —— 故既不会跑超全局,也保持"每 N 次评估交互一次"的节奏。
         //   **逐子群闭环**同 ini() 之⑵:分配与扣除若分成两个批次,中间隔着 N 个子群的消耗 → 必有超额窗口
@@ -192,15 +216,69 @@ namespace ECFlow
                 _model->build(_subpopulations, _swarm_number);
             injectNeighbors();
 
+            // v2.5.4.3 A 预分配:三-pass 取代逐子群闭环,消"分配读全局实时剩余"的前后依赖 → run pass 可并行(2.5.4.4)。
+            //   ① 预分:全局 FES 剩余按各子群配置比例分给各 sub-terminator(份额之和 ≤ 剩余 → 跑完不超全局,
+            //      故不再需要循环内 `if 全局.termination() break`——那正是阻碍并行的串行检查)。
+            _prePartitionFES();
+            //   ② run:各子群在各自份额内跑,零共享预算读写。默认串行;定义 EVOFLOW_PARALLEL_SUBPOP → 并行。
+            //      并行安全前提(2.5.1~2.5.4.3):run 期各子群只碰自身、拓扑只读自身[0]、跨子群写只在 interact()(串行)。
+#ifdef EVOFLOW_PARALLEL_SUBPOP
+            {
+                static bool __parallel_warned = false;   // 首轮提醒一次(此处单线程,无竞争)
+                if (!__parallel_warned)
+                {
+                    __parallel_warned = true;
+                    sys_logger.info("[PARALLEL] 子群级并行已启用(EVOFLOW_PARALLEL_SUBPOP)。"
+                        "请确保目标函数线程安全:无共享可变全局/静态态,随机须用框架 per-子群 RNG(get_int/rand01/get_normal 等)。");
+                    std::cerr << "[EvoFlow][PARALLEL] subpop-level parallel enabled (EVOFLOW_PARALLEL_SUBPOP): "
+                                 "ensure the objective function is thread-safe (no shared mutable global/static state; "
+                                 "use the framework per-subpop RNG)." << std::endl;
+                }
+            }
+            _resmgr.parallelRun(_swarm_number, [this](int i) { _subpopulations[i]->run(); });
+#else
+            for (int i = 0; i < _swarm_number; i++)
+                _subpopulations[i]->run();
+#endif
+            //   ③ 汇集:按**子群号顺序**merge 实耗回全局 + 复位(顺序固定 → 可复现,不依赖线程完成序)。
             for (int i = 0; i < _swarm_number; i++)
             {
-                _subterminator_pointers[i]->limited(_terminator_pointer);
-                _subpopulations[i]->run();
                 _terminator_pointer->merge(_subterminator_pointers[i]);
                 _subpopulations[i]->resetTerminator();
-
-                if (_terminator_pointer->termination()) break;   // 总预算耗尽 → 后续子群本轮不再跑
             }
+        }
+
+    private:
+        // v2.5.4.3 A 预分配:把全局 FES 剩余按各子群**每轮配置 FES** 比例预分给各 sub-terminator。
+        //   left ≥ Σ配置 → 各满配置(与串行 limited 的 min 完全相同,故非末 epoch 逐位一致);
+        //   left < Σ配置(末个不满 epoch)→ 按配置比例分(floor + 余数按子群号顺序前 r 个各 +1,确定性)。
+        //   语义差仅限"末个不满 epoch"(比例分 vs 串行贪婪按序),是 A 预分配的既定代价(用户已接受)。
+        void _prePartitionFES()
+        {
+            long long left = static_cast<long long>(_terminator_pointer->configuredFES()) - _terminator_pointer->getFESTimes();
+            if (left < 0) left = 0;
+            long long sumcfg = 0;
+            for (int i = 0; i < _swarm_number; i++) sumcfg += _subterminator_pointers[i]->configuredFES();
+
+            std::vector<int> share(_swarm_number, 0);
+            if (sumcfg > 0)
+            {
+                if (left >= sumcfg)
+                    for (int i = 0; i < _swarm_number; i++) share[i] = _subterminator_pointers[i]->configuredFES();
+                else
+                {
+                    long long assigned = 0;
+                    for (int i = 0; i < _swarm_number; i++)
+                    {
+                        share[i] = static_cast<int>(left * _subterminator_pointers[i]->configuredFES() / sumcfg);   // floor
+                        assigned += share[i];
+                    }
+                    long long rem = left - assigned;   // 余数按子群号顺序前 rem 个各 +1(确定性)
+                    for (int i = 0; i < _swarm_number && rem > 0; i++) { share[i]++; rem--; }
+                }
+            }
+            for (int i = 0; i < _swarm_number; i++)
+                _subterminator_pointers[i]->allocateEpochFES(_terminator_pointer, share[i]);
         }
     };
 }

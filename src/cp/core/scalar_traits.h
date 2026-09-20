@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/core/scalar_traits.h
 //
@@ -16,7 +18,7 @@
 #include <limits>
 #include <cmath>
 
-namespace ECFlow {
+namespace EvoFlow {
 
 // 默认：double + 1 ULP 外向取整(健全)
 struct strict_double_traits {
@@ -59,4 +61,4 @@ inline T ext_mul(T a, T b) {
     return a * b;
 }
 
-} // namespace ECFlow
+} // namespace EvoFlow

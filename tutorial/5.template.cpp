@@ -1,12 +1,13 @@
-﻿// 5.template.cpp — 用问题模板端到端跑优化
 //   演示:用 PT_TSP 一键构造一个旅行商问题 → getProblem() → 配 ACO(蚁系统) 优化器 → exe → 取最优巡回长度。
 //   模板省去手工 addVariable/addObjective/addConstrain;排列编码问题配 ACO(isolate + 构造式生成器)。
-//   构建: build.ps1 tutorial\5.template.cpp   输出英文(纪律 6)。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
 #include <cmath>
-#include "ecflow.h"          // 含 Problem/ConfigBuilder
-#include "pt-tsp.h"        // 问题模板按需单独 include(ecflow.h 不含)
-using namespace ECFlow;
+#include "evoflow.h"          // 含 Problem/ConfigBuilder
+#include "pt-tsp.h"        // 问题模板按需单独 include(evoflow.h 不含)
+using namespace EvoFlow;
 
 int main()
 {

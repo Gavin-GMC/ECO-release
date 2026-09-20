@@ -1,6 +1,7 @@
 //------------------------Description------------------------
 // "向最优靠拢 + 远离最差"更新策略 BestWorstGuided(源自 Jaya)。**无算法专属参数**(parameter-free):
 //   每维取两个 [0,1] 随机数,一项拉向当代最优、一项推离当代最差。配 BestAndWorst 拓扑(end[0]=best、end[1]=worst)。
+
 //-------------------------Reference-------------------------
 // Rao, R.V. "Jaya: A simple and new optimization algorithm for solving constrained and unconstrained
 //   optimization problems." International Journal of Industrial Engineering Computations, 7(1):19-34, 2016.
@@ -8,21 +9,16 @@
 //   X'_{j,k} = X_{j,k} + r1_j·(X_{j,best} − |X_{j,k}|) − r2_j·(X_{j,worst} − |X_{j,k}|)
 //   其中 |·| 为绝对值(原文如此);r1_j, r2_j ~ U[0,1] 每变量每代独立取。
 // 原文的"仅当更优才接受"(贪心)由**选择器**承担(selector.index(true)),非本算子职责——与框架两层分工一致。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // X' = X + r1·(best − |X|) − r2·(worst − |X|),r1/r2 逐维逐代 ~U[0,1]。无参数。
     class BestWorstGuided : public LearningStrategy
@@ -61,5 +57,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { BestWorstGuided::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { BestWorstGuided::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_bestworstguided, LearningStrategy, bestWorstGuidedEntry());
+    EVOFLOW_REGISTER(lstrat_bestworstguided, LearningStrategy, bestWorstGuidedEntry());
 }

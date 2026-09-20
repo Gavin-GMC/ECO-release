@@ -1,11 +1,12 @@
-﻿// 0.problem.cpp — 问题模块用例（参照稳定版 tutorial/0.problem.cpp，适配 v3.12 API）
 //   演示:变量/目标/约束/启发的定义 → compile() → 解评估/比较/约束违反/约束传播/启发排序。
 //   仅用问题模块(不涉及优化器)。构建: build.ps1 tutorial\0.problem.cpp
-//   输出为英文(开发纪律 6:示例输出用英文避免乱码);注释为中文。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
 #include <cmath>
-#include "ecflow.h"
-using namespace ECFlow;
+#include "evoflow.h"
+using namespace EvoFlow;
 
 // 目标/启发用的普通函数(double** = 各输入变量的元素数组;a[k][j]=第 k 个输入变量的第 j 维)
 static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }      // Σx²（对变量 x）

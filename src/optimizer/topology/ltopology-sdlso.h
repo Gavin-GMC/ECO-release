@@ -1,25 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 随机支配学习拓扑 StochasticDominantLearningTopology:每个个体从种群随机选两个个体,排序后仅当自身
 //   劣于其中较优者时才向这两个(支配它的)个体学习,否则不学习。
+
 //-------------------------Reference-------------------------
 // [1] Q. Yang, W.-N. Chen, T. Gu, H. Jin, W. Mao and J. Zhang, "An Adaptive Stochastic Dominant
 //     Learning Swarm Optimizer for High-Dimensional Optimization," IEEE Transactions on Cybernetics,
 //     vol. 52, no. 3, pp. 1960-1976, March 2022, doi: 10.1109/TCYB.2020.3034427.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <utility>
 #include "learning-topology.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class StochasticDominantLearningTopology : public LearningTopology
     {
@@ -52,8 +48,8 @@ namespace ECFlow
                 back->addStart(&cswarm[0][sid]);
 
                 // 随机选择两个个体
-                sid1 = ECFlow::get_int(0, graph_size - 1);
-                sid2 = ECFlow::get_int(0, graph_size - 1);
+                sid1 = EvoFlow::get_int(0, graph_size - 1);
+                sid2 = EvoFlow::get_int(0, graph_size - 1);
 
                 // 根据优劣对两个对象进行排序(sid1 更优)
                 if (cswarm[0][sid2] < cswarm[0][sid1])
@@ -85,5 +81,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { StochasticDominantLearningTopology::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { StochasticDominantLearningTopology::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_stochasticdominant, LearningTopology, stochasticDominantLearningTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_stochasticdominant, LearningTopology, stochasticDominantLearningTopologyEntry());
 }

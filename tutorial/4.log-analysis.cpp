@@ -1,15 +1,17 @@
-// 4.log-analysis.cpp — 日志两轴 + 结果分析（ECAnalyzer）。输出英文(纪律 6)。
 //   轴 A: 系统级 sys_logger + 每优化器 Logger(结果.rslt / 过程.prcs)。
 //   分析: 跑两个 PSO 变体 × sphere(各 REPEATS 次重复,开结果日志) → ECAnalyzer 读 .rslt
 //         → 归约/聚合/比较 → 导出 Txt/Csv/LaTeX 对比表(落 ./_analysis/)。
 //   构建: build.ps1 tutorial\4.log-analysis.cpp     日志落 ./_log/、分析表落 ./_analysis/。
 //   详见 手册 12-使用-结果分析.md。
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <cstdio>
 #include <fstream>
 #include <string>
-#include "ecflow.h"
-#include "ec-analyzer.h"        // 分析层不在 ecflow.h 内,需单独引入
-using namespace ECFlow;
+#include "evoflow.h"
+#include "ec-analyzer.h"        // 分析层不在 evoflow.h 内,需单独引入
+using namespace EvoFlow;
 
 static double f_sphere(double** a) { double s = 0; for (int i = 0; i < 5; i++) s += a[0][i] * a[0][i]; return s; }
 
@@ -24,7 +26,7 @@ static void run_variant(const std::string& name, double w, int repeats, int POP,
     ConfigBuilder cb;
     auto wf = cb.workflow("pso_wf");
     wf.initializer("Random"); wf.topology.pgBest(); wf.repair.boundary();
-    wf.strategy.velocityDriven(2, 2.0, w, 0.5 * POP / FES);
+    wf.strategy.velocityDriven(2, 2.0, w, w > 0.5 ? w - 0.5 : 0.0);
     wf.generator.orderedConstruct(); wf.evaluator.basic(); wf.selector.index(false);
 
     cb.name(name).tag("sphere").maxFES(FES).manager("Single").gArchive("Basic");
@@ -74,7 +76,7 @@ int main()
     // 速记:
     //   日志两轴 —— 轴 A 范围(sys_logger / 每优化器 / 问题-运行级) · 轴 B 类型(info/error · .rslt · .prcs);详见 手册 22 + docs/日志使用规范.md。
     //   分析三阶段 —— reduceBy(①归约) → addStatistic(②聚合) → addComparison(③比较) → report;详见 手册 12。
-    //   多目标质量指标(HV/GD/IGD)见 手册 12 §5;Excel/Word/Png 输出与 peakRatio 指标 v4 收尾前完成。
+    //   多目标/多峰质量指标(HV/GD/IGD/PeakRatio 等)及 SVG/PNG 见 手册 12 §5;Excel/Word 尚未实现。
     std::printf("4.log-analysis tutorial: DONE\n");
     return 0;
 }

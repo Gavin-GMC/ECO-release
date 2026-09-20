@@ -1,20 +1,15 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 学习图 LearningGraph:个体学习对象的拓扑(DAG)。每条边 = 一个起点个体 + 若干终点学习对象(解)。
 //   终点为空指针表示"不学习、直接进入子代"。由 LearningTopology 产出,供 OffspringGenerator 消费。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cstring>
 #include "solution.h"
 #include "individual.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 终点为空指针表示不进行学习而是直接进入子代
     class LearningGraph

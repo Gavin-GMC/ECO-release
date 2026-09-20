@@ -1,12 +1,15 @@
 // ===========================================================================
 //  out-txt.h  --  plain-text / CSV table writers for the analysis layer
-//  Part of ECFlow (migrated & cleaned in v4 from stable out-txt.h / out-excel.h).
+//  Part of EvoFlow (migrated & cleaned in v4 from stable out-txt.h / out-excel.h).
 //  Convention: string-table + optional sub-header, one delimiter per column.
 //    - writeTableToTxt : tab-separated  (.txt)
 //    - writeTableToCSV : comma-separated (.csv)   [moved here from out-excel.h]
 //  Layout of a table:  header[optimizer] x subheader[metric] grid,
 //  rowtitles[problem] on the left, tabledata[row][col] the cells.
 // ===========================================================================
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
 #include <string>
 #include <fstream>

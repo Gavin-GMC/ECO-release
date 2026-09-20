@@ -1,4 +1,6 @@
-﻿#include <iostream>
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include <iostream>
 #include <sstream>
 #include <iomanip>
 
@@ -7,7 +9,7 @@
 
 #include"solution.h"
 
-using namespace ECFlow;
+using namespace EvoFlow;
 
 // ���캯��ʵ��
 SolutionDecoder::SolutionDecoder(ElementNote* variables, int variable_number, Objective* objectives, int object_number)

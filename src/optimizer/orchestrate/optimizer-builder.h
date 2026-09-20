@@ -1,13 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // OptimizerBuilder:从 config 装配 O_Workflow 与 Subpopulation。O_Workflow 的友元,直填其单表 components。
-//   顶层 optimizer/manager/logger/g_archive、配置文件编解码、assert 校验随 v3.5/v3.6。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <memory>
@@ -48,17 +42,17 @@
 #include "terminator.h"
 
 // -------------------------------------------------------
-// 装配期校验开关(风格沿用 ECFC原代码 ecflow-builder.h 的 ECFLOW_DISABLE_BUILD_VALIDATION)
+// 装配期校验开关(风格沿用 ECFC原代码 evoflow-builder.h 的 EVOFLOW_DISABLE_BUILD_VALIDATION)
 //   两道校验在 buildSubpopulation 前**依次**执行,各自可独立禁用:
 // -------------------------------------------------------
 
 // 打开此宏以禁用装配前的**断言匹配**校验(AssertMatcher:组件间契约,如 strategy 需 topology.objects)
-// #define ECFLOW_DISABLE_ASSERT_VALIDATION
+// #define EVOFLOW_DISABLE_ASSERT_VALIDATION
 
 // 打开此宏以禁用装配前的**参数模板**校验(ParamMatcher:组件自身参数的元数/留空/范围/整值)
-// #define ECFLOW_DISABLE_PARAM_VALIDATION
+// #define EVOFLOW_DISABLE_PARAM_VALIDATION
 
-namespace ECFlow
+namespace EvoFlow
 {
     class OptimizerBuilder
     {
@@ -151,7 +145,8 @@ namespace ECFlow
             return wf ? buildWorkflow(*wf) : nullptr;
         }
 
-        // 装配期校验的统一落地:警告 → sys_logger.warning;硬失败 → sys_logger.error 落盘 + 抛。
+        // 装配期校验的统一落地:警告 → sys_logger.warning;Info 留给显式 validate 展示;
+        //   硬失败 → sys_logger.error 落盘 + 抛。
         //   两道校验(assert / param)共用本函数 → 报错风格一致,用户看到的是同一种错误。
         static void reportOrThrow(const ValidateResult& vr, const std::string& mark, const std::string& subject)
         {
@@ -163,7 +158,7 @@ namespace ECFlow
             throw std::runtime_error(oss.str());
         }
 
-        // 装配前校验:①assert ②param。**依次**执行,各自可宏禁用。
+        // 装配前校验:①assert(v3.8.1,组件间契约) ②param(v1.4.6.4,组件自身参数模板)。**依次**执行,各自可宏禁用。
         //   次序理由:assert 先行——它含 N5(tag 合法);tag 都不认识时,再报参数错只会淹没真正的原因。
         void validateOrThrow(const SubpopulationConfig& pc)
         {
@@ -171,17 +166,18 @@ namespace ECFlow
             if (wf == nullptr)
                 throw std::runtime_error("[assert] subpopulation '" + pc.tag + "': unknown workflow tag '" + pc.workflow_tag + "'");
 
-#ifndef ECFLOW_DISABLE_ASSERT_VALIDATION
+#ifndef EVOFLOW_DISABLE_ASSERT_VALIDATION
             reportOrThrow(AssertMatcher::validate(*wf), "[assert]", "workflow '" + pc.workflow_tag + "'");
 #endif
 
-#ifndef ECFLOW_DISABLE_PARAM_VALIDATION
+#ifndef EVOFLOW_DISABLE_PARAM_VALIDATION
             reportOrThrow(ParamMatcher::validate(*wf), "[param]", "workflow '" + pc.workflow_tag + "'");
             reportOrThrow(ParamMatcher::validate(pc),  "[param]", "subpopulation '" + pc.tag + "'");
 #endif
         }
 
-        // 从 SubpopulationConfig 装配 Subpopulation(拥有 parent/offspring/archive/terminator/workflow;logger 不拥有)
+        // 从 SubpopulationConfig 装配 Subpopulation(拥有 parent/offspring/archive/terminator/workflow;
+        //   v2.5.3:logger 改为子群级【仅过程】sink,由 Subpopulation **拥有并析构**;缺省 nullptr=不记过程)
         Subpopulation* buildSubpopulation(const SubpopulationConfig& pc, Logger* logger = nullptr)
         {
             validateOrThrow(pc);   // 装配前校验(缓存,一 workflow 多子群只校一次)
@@ -191,7 +187,8 @@ namespace ECFlow
             std::unique_ptr<O_Workflow> wf = buildWorkflow(*wfc);
             std::vector<FeatureSpec> spec = FeatureInference::infer(wfc->components, wf->components);
 
-            // 有推断特性 → 造基类 + 挂特性;无 → 只造基类
+            // 有推断特性 → 造基类 + 挂特性;无 → 只造基类(v1.4.8:原"老路径"传 individual_type,
+            //   但 newArray 从不读它、造的同样是基类 → 已删该形参)
             IndividualArray* parent    = spec.empty() ? new IndividualArray(pc.size)
                                                       : new IndividualArray(spec, pc.size);
             IndividualArray* offspring = spec.empty() ? new IndividualArray(pc.size)
@@ -233,8 +230,16 @@ namespace ECFlow
 
             int n = (int)subpopulations.size();
             mgr->setSwarmNumber(n);
+            // v2.5.3 LOG-PRCS-MULTIPOP:每子群自持一个【仅过程】sink(仅当进程记录开时)。
+            //   **一律**带 _<tag> 后缀写子群级 _<run>_<tag>.prcs(去 single 特殊化,格式统一);
+            //   全局级 _<run>.prcs 由优化器主 Logger 另写。分析器收敛曲线经 `.swarm(id)` 显式选级。
             for (int i = 0; i < n; i++)
-                mgr->setSwarm(buildSubpopulation(subpopulations[i], logger), i);
+            {
+                Logger* sink = (logger && logger->process_print())
+                    ? logger->spawnProcessSink(subpopulations[i].tag)
+                    : nullptr;
+                mgr->setSwarm(buildSubpopulation(subpopulations[i], sink), i);
+            }
 
             const double* gap = g_archive_para.empty() ? nullptr : g_archive_para.data();
             BestArchive* g_archive = req(Registry<BestArchive>::instance().create(g_archive_tag, gap),
@@ -249,7 +254,8 @@ namespace ECFlow
             std::string tag = cfg.tag.empty() ? std::to_string(time(NULL)) : cfg.tag;
 
             Logger* logger = new Logger(cfg.name, tag,
-                cfg.logger_full_result, cfg.logger_process, cfg.logger_full_process, cfg.logger_console_echo);
+                cfg.logger_full_result, cfg.logger_process, cfg.logger_full_process, cfg.logger_console_echo,
+                cfg.logger_swarm);
 
             Population* pop = buildPopulation(cfg.cooperation, cfg.subpopulations,
                 cfg.g_archive_tag, cfg.g_archive_para, logger);

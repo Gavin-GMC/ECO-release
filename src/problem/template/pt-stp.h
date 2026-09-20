@@ -1,15 +1,10 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 斯坦纳树 (Steiner Tree Problem in Graphs) 问题模板。
-//-------------------------Reference-------------------------
-// 图上斯坦纳树;SteinLib / 第 11 届 DIMACS Challenge 实例(FrontierCO 的 STP 来源)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -19,9 +14,9 @@
 #include <algorithm>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_STP
+    class PT_STP : public ProblemTemplate
     {
     public:
         enum class StpHeur { Spanning, SteinerPrune };   // 生成树(Kruskal)/ MST+剪非终端叶子(斯坦纳)
@@ -100,7 +95,8 @@ namespace ECFlow
 
     public:
         PT_STP() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_STP(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return static_cast<int>(_etail.size()); }   // = |E|
         void setPenalty(double p) { _penalty = p; }
         void setHeuristic(StpHeur h) { _heur = h; }   // 默认 SteinerPrune(MST+剪枝)
@@ -116,7 +112,8 @@ namespace ECFlow
             for (int e = 0; e < m; ++e) { _etail[e] = edges[2 * e]; _ehead[e] = edges[2 * e + 1]; }
         }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/stp/<name>.stp(overwrite=false 时不覆盖)。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/stp/" + _name + ".stp";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("STP save: file exists (use overwrite): " + path); return; } }
@@ -129,7 +126,7 @@ namespace ECFlow
             for (int t : _terminals) out << (t + 1) << "\n";
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             int m = static_cast<int>(_etail.size());
             if (m == 0) return nullptr;
@@ -162,7 +159,7 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "stp", "stp"));
@@ -202,3 +199,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(stp, "STP", EvoFlow::PT_STP);

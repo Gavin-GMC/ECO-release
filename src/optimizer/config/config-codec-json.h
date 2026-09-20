@@ -1,14 +1,4 @@
-﻿//------------------------Description------------------------
-// 配置文件编解码 v3.2:FullConfig ⇄ JSON(机器友好)。手写最小 JSON DOM + 递归下降解析器(无第三方依赖)。
-//-------------------------Reference-------------------------
-// 全新设计(非迁移)。结构对应 configure-list.h;与 v3.1 文本(config-codec.h)语义等价、载体不同。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -18,7 +8,7 @@
 #include "configure-list.h"
 #include "config-codec.h"   // FullConfig, codec::num/typeKeyword/keywordType
 
-namespace ECFlow
+namespace EvoFlow
 {
     namespace codec
     {
@@ -166,7 +156,7 @@ namespace ECFlow
             const OptimizerConfig& op = fc.optimizer;
             o << "\"name\":\"" << op.name << "\",\"tag\":\"" << op.tag << "\",";
             o << "\"terminator\":[" << op.terminate_conditions[0] << "," << op.terminate_conditions[1] << "," << op.terminate_conditions[2] << "],";
-            o << "\"logging\":[" << (op.logger_full_result ? "true" : "false") << "," << (op.logger_process ? "true" : "false") << "," << (op.logger_full_process ? "true" : "false") << "],";
+            o << "\"logging\":[" << (op.logger_full_result ? "true" : "false") << "," << (op.logger_process ? "true" : "false") << "," << (op.logger_full_process ? "true" : "false") << "," << (op.logger_swarm ? "true" : "false") << "],";
             tagPara(o, "manager", op.cooperation.manager_tag, op.cooperation.manager_para); o << ",";
             tagPara(o, "constructer", op.cooperation.constructer_tag, op.cooperation.constructer_para); o << ",";
             tagPara(o, "ctopology", op.cooperation.topology_tag, op.cooperation.topology_para); o << ",";
@@ -210,9 +200,15 @@ namespace ECFlow
             op.terminate_conditions[0] = (int)jo["terminator"].arr[0].num;
             op.terminate_conditions[1] = (int)jo["terminator"].arr[1].num;
             op.terminate_conditions[2] = (int)jo["terminator"].arr[2].num;
-            op.logger_full_result = jo["logging"].arr[0].b;
-            op.logger_process = jo["logging"].arr[1].b;
-            op.logger_full_process = jo["logging"].arr[2].b;
+            // v2.2.2.3:加长度守卫。原为直接下标 arr[0..2] —— 短数组即越界(现存 bug,非本批引入);
+            //   且 3 值→4 值扩展后,既有 3 值 JSON 必须仍能读(缺项取默认 false)。
+            {
+                const auto& lg = jo["logging"].arr;
+                op.logger_full_result  = (lg.size() > 0) && lg[0].b;
+                op.logger_process      = (lg.size() > 1) && lg[1].b;
+                op.logger_full_process = (lg.size() > 2) && lg[2].b;
+                op.logger_swarm        = (lg.size() > 3) && lg[3].b;
+            }
             codec::jsonReadTagPara(jo["manager"], op.cooperation.manager_tag, op.cooperation.manager_para);
             codec::jsonReadTagPara(jo["constructer"], op.cooperation.constructer_tag, op.cooperation.constructer_para);
             codec::jsonReadTagPara(jo["ctopology"], op.cooperation.topology_tag, op.cooperation.topology_para);
@@ -221,6 +217,7 @@ namespace ECFlow
             for (const auto& js : jo["subpopulations"].arr)
             {
                 SubpopulationConfig sp;
+                // v1.4.8:已删 individual 项;旧 JSON 里多出的该字段由 operator[] 自然忽略(缺键返回 none)
                 sp.tag = js["tag"].str; sp.size = (int)js["size"].num;
                 sp.workflow_tag = js["workflow"].str;
                 sp.terminate_conditions[0] = (int)js["terminator"].arr[0].num;

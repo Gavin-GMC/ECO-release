@@ -1,24 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 精英学习拓扑 EliteTopology:从最优档案取 elite_number 个精英,每个重复 repeat_times 次作为学习起点,
 //   各自向自身(精英解)学习——用于在精英附近反复生成。
-//-------------------------Reference-------------------------
-// 无特定文献:精英学习(通用 elitism 思想——从最优档案取精英作为学习对象,在其附近反复生成)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <algorithm>
 #include "learning-topology.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class EliteTopology : public LearningTopology
     {
@@ -79,7 +72,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { EliteTopology::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { EliteTopology::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_elite, LearningTopology, eliteTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_elite, LearningTopology, eliteTopologyEntry());
 
     // 种群 top-e 精英作起点(局搜强化):取当代种群前 e 名(fitness),每精英作**起点**重复 r 次——
     //   起点 = **种群槽** `&pop[精英槽]`(非内部 buffer),故 RunGenerate 通用盖 `id=槽` → 邻居出生派生 `parent_id=精英槽`,
@@ -151,5 +144,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { TopIndividual::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { TopIndividual::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_topindividual, LearningTopology, topIndividualTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_topindividual, LearningTopology, topIndividualTopologyEntry());
 }

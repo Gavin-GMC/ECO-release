@@ -1,10 +1,7 @@
-﻿//------------------------Description------------------------
-//   均以现有/新增算子**纯配置**构筑(不单独造局搜组件)。用 v3.10 同款流程(ConfigBuilder/WorkflowSetter
-//   fluent)→ ConfigBuilder::saveConfig 落 v3.1 文本配置表 → config/<name>.cfg,并 save→load→
+//------------------------Description------------------------
 //   round-trip 无损 + AssertMatcher 静态自检。随局搜推进逐步扩充(当前:爬山、模拟退火)。
-//-------------------------Reference-------------------------
-// 局搜落位见 v3.11 讨论:爬山=Index{better_replace=1}(贪婪接受,现成),邻域=现有变异算子(rate=1 每代必移动)。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #include <cstdio>
 #include <string>
@@ -12,11 +9,11 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
-#include "ecflow.h"
+#include "evoflow.h"
 #include "config-setter.h"
 #include "config-codec.h"
 #include "assert-matcher.h"
-using namespace ECFlow;
+using namespace EvoFlow;
 
 static const std::string OUTDIR = "config";
 static const int MAXFES = 100000;
@@ -198,7 +195,7 @@ int main()
     // 避开"算子内评估整条路径"(与评估分工冲突);扫描的择优由 kinshipGreedy 承担。
     gen("pathrelink_pso", SIZE, [](WorkflowSetter& w) {
         w.initializer("Random"); w.repair.boundary();
-        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.0001);
+        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         w.generator.orderedConstruct(); w.evaluator.basic(); w.selector.index(false);          // —— PSO 主段 ——
         w.topology.repeatWithBest(4); w.strategy.pathRelinking();
         w.generator.orderedConstruct(); w.evaluator.basic(); w.selector.kinshipGreedy();        // —— 路径重连段 ——
@@ -211,14 +208,14 @@ int main()
     // 以 PSO 为主段示例(连续),精英段追加其后每代强化 top-e。repair 一次前置覆盖两段。
     gen("elite_pop_pso", SIZE, [](WorkflowSetter& w) {
         w.initializer("Random"); w.repair.boundary();
-        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.0001);
+        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         w.generator.orderedConstruct(); w.evaluator.basic(); w.selector.index(false);   // —— PSO 主段 ——
         w.topology.topIndividual(3, 3); w.strategy.differencePerturbation();
         w.generator.generation(); w.evaluator.basic(); w.selector.kinshipGreedy();       // —— 精英段:种群 top-e + 血缘定向替换 ——
     });
     gen("elite_archive_pso", SIZE, [](WorkflowSetter& w) {
         w.initializer("Random"); w.repair.boundary();
-        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.0001);
+        w.topology.pgBest(); w.strategy.velocityDriven(2, 2.0, 0.9, 0.4);
         w.generator.orderedConstruct(); w.evaluator.basic(); w.selector.index(false);   // —— PSO 主段 ——
         w.topology.elite(3, 3); w.strategy.gaussMutation(1.0, 1);
         w.generator.generation(); w.evaluator.basic(); w.selector.rank();                // —— 精英段:档案精英 + rank 全局归并 ——

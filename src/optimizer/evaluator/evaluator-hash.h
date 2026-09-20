@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 哈希评估器 HashEvaluator:按决策向量缓存评估结果,相同解不重复调真实评估(省评估预算/FES)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cstdint>
@@ -15,7 +10,7 @@
 #include "evaluator.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class HashEvaluator final : public Evaluator
     {
@@ -110,5 +105,5 @@ namespace ECFlow
             [](const double*) -> Evaluator* { return new HashEvaluator(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(eval_hash, Evaluator, hashEvaluatorEntry());
+    EVOFLOW_REGISTER(eval_hash, Evaluator, hashEvaluatorEntry());
 }

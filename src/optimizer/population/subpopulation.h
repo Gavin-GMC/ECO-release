@@ -1,13 +1,8 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 子种群 Subpopulation:统辖一组个体全部活动的基本单元——子代生成、环境选择等。
 //   持亲代/子代两个 IndividualArray + 一条 O_Workflow(编排流水线) + 档案/终止器。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <memory>
@@ -18,10 +13,10 @@
 #include "terminator.h"
 #include "optimize-workflow.h"
 #include "problem-handle.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "logger.hpp"   // v3.6 LOG:接通每优化器 Logger(共用件 src/logger/)
 
-namespace ECFlow
+namespace EvoFlow
 {
 
     class Subpopulation
@@ -41,7 +36,24 @@ namespace ECFlow
         BestArchive**     _archives_buffer;
         int _buffers_size;
 
-        Logger* _logger_point;         // 不拥有
+        // v2.5.3 LOG-PRCS-MULTIPOP:子群级过程日志 sink,**本子群自持**(process-only Logger,
+        //   进程记录关时为 nullptr → 不写)。每子群各写自己的 .prcs → 天然并行安全(2.5.4 前置)。
+        //   _epoch:本地 epoch 计数,run() 每次入口 +1 并落 #epoch 边界,使逐 epoch 终止器重置致的
+        //   fes 锯齿在拼接的子群 trace 中可切段(用户决策3)。
+        Logger* _own_logger;           // 拥有(dtor 释放)
+        int _epoch;
+
+        // per-子群 RNG(2.5.2):本子群持久引擎 + 序号。
+        //   运行期 ini()/run() 顶部用 EngineScope 把当前引擎指向 _engine,
+        //   使深在 workflow 里的通用 RNG 调用透明落到本子群引擎(并行时各线程互不干扰)。
+        //   _index 仅在播种时用于派生确定性种子(derive_subpop_seed),运行期不用。
+        std::mt19937 _engine;
+        int _index;
+
+        // per-子群 ProblemHandle 副本(2.5.4.2):setProblem 时从主句柄**深拷一份**,本子群自持。
+        //   评估热路径(workflow/arrays/archive/comparer)全走这份副本 → 各子群评估状态独立
+        //   (配合 2.5.1 的 CEC clone / functor 深拷)→ 并行时互不写冲突。本子群拥有、dtor 释放。
+        ProblemHandle* _own_handle;
 
     public:
         Subpopulation(std::string id, IndividualArray* parent, IndividualArray* offspring, Terminator* terminator, BestArchive* best_archive, Logger* logger)
@@ -59,7 +71,12 @@ namespace ECFlow
             _archives_buffer = nullptr;
             _buffers_size = 0;
 
-            _logger_point = logger;
+            _own_logger = logger;   // v2.5.3:自持 process-only Logger(builder 造;进程记录关时为 nullptr)
+            _epoch = 0;
+
+            _index = 0;   // 引擎默认构造,种子由 seedEngine 于 exe 时派下(见 SubpopulationManager::seedEngines)
+
+            _own_handle = nullptr;   // v2.5.4.2:setProblem 时深拷主句柄
         }
 
         ~Subpopulation()
@@ -70,15 +87,35 @@ namespace ECFlow
             delete _terminator;
             delete[] _parent_buffer;
             delete[] _archives_buffer;
+            delete _own_logger;   // v2.5.3:自持子群级 sink
+            delete _own_handle;   // v2.5.4.2:自持句柄副本(在 arrays/workflow 之后删——它们只持指针、不删句柄)
         }
 
         void setProblem(ProblemHandle* problem_hanlde)
         {
-            _parent->setProblem(problem_hanlde);
-            _offspring->setProblem(problem_hanlde);
-            _best_archive->setProblem(problem_hanlde);
-            workflow->setProblem(problem_hanlde);
-            _comparer_pointer = problem_hanlde->getSolutionComparer();
+            // v2.5.4.2:深拷一份主句柄,本子群自持;评估热路径全走这份副本 → per-子群评估独立。
+            //   (可重入:再次 setProblem 先删旧副本。深拷=同问题、确定性,故串行结果与共享一份逐位一致。)
+            delete _own_handle;
+            _own_handle = new ProblemHandle(*problem_hanlde);
+
+            _parent->setProblem(_own_handle);
+            _offspring->setProblem(_own_handle);
+            _best_archive->setProblem(_own_handle);
+            workflow->setProblem(_own_handle);
+            _comparer_pointer = _own_handle->getSolutionComparer();
+            // v2.5.3:子群级 sink 的 .prcs 需落到 _log/<opt>/<prob>/ → 同步问题名
+            if (_own_logger) _own_logger->setProblem(_own_handle->getName());
+        }
+
+        // v2.5.3 LOG-PRCS-MULTIPOP:开本子群本轮的过程文件(优化器 ini 时逐子群扇出调用)。
+        //   header extra 声明这是【子群级】文件 + 本群 id/规模,供读取端/人区分两级。
+        void newProcessLog(int exe_counter)
+        {
+            _epoch = 0;
+            if (!_own_logger) return;
+            std::string extra = "\tLevel:\tsubpop\tSwarm:\t" + _id
+                              + "\tSwarmSize:\t" + std::to_string(_parent->getSize());
+            _own_logger->newOptimization(exe_counter, extra);
         }
 
         void setWorkflow(std::unique_ptr<O_Workflow> workflow)
@@ -119,8 +156,18 @@ namespace ECFlow
             return _id;
         }
 
+        // 播种本子群引擎(2.5.2):管理器在 exe 播全局种子后调用一次,跨代延续、不逐轮重播。
+        //   index==0 → 与全局默认引擎逐位一致(单子群保持改造前行为);index>0 错开各子群流。
+        void seedEngine(unsigned int base_seed, int index)
+        {
+            _index = index;
+            seed_engine(_engine, derive_subpop_seed(base_seed, index));
+        }
+
         void ini()
         {
+            EngineScope es(&_engine);   // 本子群初始化期间所有 RNG 走自己的引擎
+
             _best_archive->clear();
 
             // offspring 是每迭代 scratch:workflow 在迭代末清空,但开跑前也须为空。
@@ -130,6 +177,7 @@ namespace ECFlow
             _offspring->clear();
 
             // 初始种群:**逐个体**初始化(含评估)→ 更新档案 → 计 FES,且**每个体前查终止**。
+            //   v1.4.8 修:原为 `_parent->ini()` 一次性评估**全部**个体、事后再补计 N 次 FES ——
             //   期间不看预算 → **先花后记**:种群 400 而剩余预算 200 时,400 次评估已实际发生,
             //   `termination()` 直到 ini 结束才可能为真 → **超额 100%**。
             //   (对照:Evaluator/workflow 早已逐个体、逐段查终止,唯独 ini 走的是**独立于 Evaluator 的
@@ -177,28 +225,60 @@ namespace ECFlow
 
         void run()
         {
+            EngineScope es(&_engine);   // 本子群本轮运行期间所有 RNG 走自己的引擎
+
+            // v2.5.3 决策3:每次 run()=一个 epoch。入口落 #epoch 边界 —— epoch 间 manager 会
+            //   resetTerminator() 使 fes 归零,拼接的子群 trace 会呈锯齿;此标记让重置可切段。
+            //   走 logProcessMeta(不进 -v 回显);读取端跳过 #(非 #rec)元行。
+            if (_own_logger != nullptr && _own_logger->process_print())
+                _own_logger->logProcessMeta("#epoch\t" + std::to_string(_epoch));
+            _epoch++;
+
             while (!_terminator->termination())
             {
                 nextIteration();
 
-                if (_logger_point != nullptr && _logger_point->process_print())
+                // v3.6 LOG:过程打印(每代最优;若 swarm_print 再打印整群)
+                // v2.2.2.2 LOG-PRCS-FORMAT:每代先落一条【记录头】,再落带角色前缀的数据行 ——
+                //   解决旧裸行流"每代行数不定(多目标非支配集/整群)⇒ 消费方无法切分代"。
+                //   记录头以 FES 为主键(收敛曲线横轴即 FES),代号由记录序天然给出,
+                //   故无需维护"随 run() 每 epoch 重入还要正确复位"的代计数器。
+                if (_own_logger != nullptr && _own_logger->process_print())
                 {
                     int size = 0;
                     Solution* bests = nullptr;
                     getBest(bests, size);
-                    for (int i = 0; i < size; i++)
-                        _logger_point->logprocess(bests[i].decoder_pointer->toString(
-                            bests[i].result, bests[i].fitness, _logger_point->full_process_print()));
+                    bool swarm = _own_logger->swarm_print();
+                    int psize = swarm ? _parent->getSize() : 0;
 
-                    if (_logger_point->swarm_print())
+                    // fes 取本子群自持计数:单子群准确;多子群下各群独立计数,故带 swarm 字段
+                    //   供消费方区分来源(整体形态见 TODO LOG-PRCS-MULTIPOP,本轮不做)
+                    _own_logger->logProcessMeta(
+                        "#rec\tfes\t" + std::to_string(_terminator->getFESTimes()) +
+                        "\tswarm\t" + _id +
+                        "\tnbest\t" + std::to_string(size) +
+                        "\tnpop\t" + std::to_string(psize));
+
+                    // v1.1:数据行前缀取【块内序号】,与 .rslt 的 `i+1:\t<toString>` 完全同构
+                    //   ⇒ 一个行解析器可同时服务 .rslt/.prcs。块归属由 #rec 计数与分割线界定,
+                    //   不再靠 b/p 字母(分割线已足够显眼,字母是冗余)。
+                    for (int i = 0; i < size; i++)
+                        _own_logger->logprocess(std::to_string(i + 1) + ":\t" +
+                            bests[i].decoder_pointer->toString(
+                                bests[i].result, bests[i].fitness, _own_logger->full_process_print()));
+
+                    if (swarm)
                     {
-                        int psize = _parent->getSize();
+                        // v2.2.2.3(.prcs v1.1):最优解与整群之间加分割线 —— 仅靠 b/p 前缀不够显眼。
+                        //   `#` 开头,与 `#rec` 同属元数据族,同走 logProcessMeta ⇒ 不进 -v 回显。
+                        _own_logger->logProcessMeta("#---------------- population ----------------");
                         for (int i = 0; i < psize; i++)
                         {
                             // 迁移修复:原用 bests[i].result/fitness + 亲代 decoder(混用且 i 可越 bests 界)→ 改用亲代个体自身解
                             Solution& s = (*_parent)[i].solution;
-                            _logger_point->logprocess(s.decoder_pointer->toString(
-                                s.result, s.fitness, _logger_point->full_process_print()));
+                            _own_logger->logprocess(std::to_string(i + 1) + ":\t" +
+                                s.decoder_pointer->toString(
+                                    s.result, s.fitness, _own_logger->full_process_print()));
                         }
                     }
                 }

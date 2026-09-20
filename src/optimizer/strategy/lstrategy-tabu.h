@@ -1,12 +1,9 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 禁忌搜索(Tabu Search)学习策略——落 strategy(生成侧记忆引导),两种形态:
 //   ① TabuDecorator(装饰器):继承策略 + 内部组合一个邻域变异(黑盒),diff 推断移动特征 + 拒绝采样(禁忌则重产)。
 //   ② TabuBit(自带点变异邻域):自实现点变异(选一维取值域内随机值),知道改哪维(精确移动属性)+ 主动从非禁忌维选(生成时引导)。
-//-------------------------Reference-------------------------
-// 新增算子(非迁移)。禁忌搜索:Glover 1986。落位分析见 v3.11.2 讨论(禁忌属生成引导=strategy,非接受过滤=selector)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <deque>
@@ -16,10 +13,10 @@
 #include "individual.h"
 #include "individual-array.h"
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 装饰器包裹的内部邻域(枚举 → tag);para[0]=此枚举,para[1]=tenure,para[2..]=inner 参数
     inline const char* const* tabuInnerTags()
@@ -100,11 +97,11 @@ namespace ECFlow
             int pos = -1;
             for (int t = 0; t < 10 * n; t++)
             {
-                int p = ECFlow::get_int(0, n - 1);
+                int p = EvoFlow::get_int(0, n - 1);
                 bool tabu = false; for (int tp : _tabu_pos) if (tp == p) { tabu = true; break; }
                 if (!tabu) { pos = p; break; }
             }
-            if (pos < 0) pos = ECFlow::get_int(0, n - 1);   // 全禁忌:兜底随机
+            if (pos < 0) pos = EvoFlow::get_int(0, n - 1);   // 全禁忌:兜底随机
 
             // 点变异:该维取值域内随机值(循环确保 ≠ 原值 → 构成移动;二元域下即翻转)
             double old_v = child->solution.result[pos], v = old_v;
@@ -123,6 +120,7 @@ namespace ECFlow
                                  {"tenure", ParamKind::Int,  1, 10000, false, 7, 7} },
                                // next:下一级 = **内层算子自己的完整模板**(schema 由本级 `inner` 的取值决定,指向另一个组件)。
                                //   与本 Entry 的 pre/post **同形** —— 它们也按 inner 委托内层(create/preAssert/postAssert 均 p+2)。
+                               //   v1.4.6.7:模板自包含后,此处原样返回内层模板即**连同其自身的 next 一并带入** →
                                //   内层若也有 next(如内层为 ALNS),会被解析方继续逐级展开,**无需在此手写递归**。
                                //   my_para 为本级切片 → inner 在 my_para[0];内层参数从本级偏移 2 起(与 create 的 p+2 一致)。
                                [](const double* my_para, size_t n) -> ParameterTemplate {
@@ -142,7 +140,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { if (p) { int i = (int)p[0]; if (i >= 0 && i < tabuInnerCount()) Registry<LearningStrategy>::instance().preAssert(tabuInnerTags()[i], L, p + 2); } },
             [](AssertList& L, const double* p) { if (p) { int i = (int)p[0]; if (i >= 0 && i < tabuInnerCount()) Registry<LearningStrategy>::instance().postAssert(tabuInnerTags()[i], L, p + 2); } } };
     }
-    ECFLOW_REGISTER(lstrat_tabu_decorator, LearningStrategy, tabuDecoratorEntry());
+    EVOFLOW_REGISTER(lstrat_tabu_decorator, LearningStrategy, tabuDecoratorEntry());
 
     inline Registry<LearningStrategy>::Entry tabuBitEntry()
     {
@@ -151,5 +149,5 @@ namespace ECFlow
             [](const double* p) -> LearningStrategy* { return p ? new TabuBit((int)p[0]) : new TabuBit(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(lstrat_tabu_bit, LearningStrategy, tabuBitEntry());
+    EVOFLOW_REGISTER(lstrat_tabu_bit, LearningStrategy, tabuBitEntry());
 }

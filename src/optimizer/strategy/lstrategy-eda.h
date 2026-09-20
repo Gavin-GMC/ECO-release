@@ -1,28 +1,25 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 分布估计学习策略 DistributionEstimation:统计当前种群优质个体在各维的分布,据此概率模型采样生成子代。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "solution.h"
 #include "learning-strategy.h"
 #include "distribution-factory.h"
 #include "registry.h"
+#include <vector>
 
-namespace ECFlow
+namespace EvoFlow
 {
     class DistributionEstimation : public LearningStrategy
     {
     private:
         DistributionType _dm_type;
         DistributionModel** _models;   // 每个维度一个分布模型
+        std::vector<unsigned char> _model_ready;   // 本轮该维至少有一个有效样本
         int _demensions;
         double _good_number;           // 未设 = EMPTYVALUE(int→double,以容纳 NaN 哨兵)
         double _good_rate;
@@ -60,6 +57,7 @@ namespace ECFlow
                 delete[] _models;
                 _demensions = problem_handle->getProblemSize();
                 _models = DistributionFactory::newModelArray(_dm_type, _demensions);
+                _model_ready.assign(_demensions, 0);
             }
         }
 
@@ -68,22 +66,36 @@ namespace ECFlow
             population.sort();
 
             for (int i = 0; i < _demensions; i++)
+            {
                 _models[i]->clear();
+                _model_ready[i] = 0;
+            }
 
             // 未设 good_number → 用 good_rate 比例(修复:原 int==EMPTYVALUE 恒假)
             int good_number = is_empty(_good_number) ? int(_good_rate * population.getSize()) : int(_good_number);
 
             for (int i = 0; i < _demensions; i++)
             {
+                int valid_samples = 0;
                 for (int j = 0; j < good_number; j++)
-                    _models[i]->addSample(population[j].solution.result[i]);
-                _models[i]->build();
+                {
+                    double sample = population[j].solution.result[i];
+                    if (is_empty(sample))
+                        continue;
+                    _models[i]->addSample(sample);
+                    valid_samples++;
+                }
+                if (valid_samples > 0)
+                {
+                    _models[i]->build();
+                    _model_ready[i] = 1;
+                }
             }
         }
 
         double nextDecision(const int decision_d, Individual* individual, Solution** learning_object, ProblemHandle* problem_handle, Individual* child) override
         {
-            return _models[decision_d]->getValue();
+            return _model_ready[decision_d] ? _models[decision_d]->getValue() : EMPTYVALUE;
         }
     };
 
@@ -100,5 +112,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { DistributionEstimation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { DistributionEstimation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_distributionestimation, LearningStrategy, distributionEstimationEntry());
+    EVOFLOW_REGISTER(lstrat_distributionestimation, LearningStrategy, distributionEstimationEntry());
 }

@@ -1,16 +1,11 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 环境选择 ScalarReplace:MOEA/D 的标量化替换——每个子问题 i 的子代按 Tchebycheff 值尝试替换其邻域内 ≤nr 个邻居。
-//   行为名(纪律 4):按"标量化值 + 邻域"替换,不绑算法名。
+
 //-------------------------Reference-------------------------
 // Q. Zhang, H. Li, "MOEA/D: A Multiobjective Evolutionary Algorithm Based on Decomposition,"
 // IEEE Trans. Evolutionary Computation, vol. 11, no. 6, pp. 712-731, 2007.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -18,10 +13,10 @@
 #include "selector.h"
 #include "individual-array.h"
 #include "mo-util.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class ScalarReplace final : public EnvirSelect
     {
@@ -72,7 +67,7 @@ namespace ECFlow
             {
                 Individual& child = offspring[i];
                 std::vector<int> nb = _B[i];
-                for (int k = (int)nb.size() - 1; k > 0; k--) { int r = ECFlow::get_int(0, k); std::swap(nb[k], nb[r]); } // 打乱
+                for (int k = (int)nb.size() - 1; k > 0; k--) { int r = EvoFlow::get_int(0, k); std::swap(nb[k], nb[r]); } // 打乱
 
                 int replaced = 0;
                 for (int j : nb)
@@ -94,5 +89,5 @@ namespace ECFlow
             [](const double* p) -> EnvirSelect* { return p ? new ScalarReplace((int)p[0], (int)p[1]) : new ScalarReplace(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(sel_scalarreplace, EnvirSelect, scalarReplaceEntry());
+    EVOFLOW_REGISTER(sel_scalarreplace, EnvirSelect, scalarReplaceEntry());
 }

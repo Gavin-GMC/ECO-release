@@ -1,13 +1,10 @@
-﻿//------------------------Description------------------------
-//   重建稳定版 tutorial/5.config_generatre.cpp 的全 60 个经典优化器配置,各编码为 **v3.1 文本配置表**
+//------------------------Description------------------------
+//   重建稳定版 tutorial/5.config_generatre.cpp 的全 60 个经典优化器配置,各编码为
 //   经 ConfigBuilder::saveConfig 落盘到 config/<name>.cfg(每配置一份,可 ConfigBuilder::loadConfig 按名读回)。生成后即用 AssertMatcher
 //   静态自检(encode→decode→round-trip 无损 + 组件兼容校验),末尾汇总。
 //   用法:运行可执行文件,配置表落 ./config/<name>.cfg(OUTDIR 为相对路径,依运行 cwd)。
-//-------------------------Reference-------------------------
-// 移植自 archive/ECFC稳定版本/tutorial/5.config_generatre.cpp(旧 enum-id+PARANUM setter → 新 string-tag)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #include <cstdio>
 #include <string>
@@ -15,11 +12,11 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
-#include "ecflow.h"
+#include "evoflow.h"
 #include "config-setter.h"    // WorkflowSetter
 #include "config-codec.h"     // ConfigCodecV31
 #include "assert-matcher.h"   // AssertMatcher / ValidateResult
-using namespace ECFlow;
+using namespace EvoFlow;
 
 static const std::string OUTDIR = "config";
 static const int MAXFES = 100000;     // 稳定版统一 1e5
@@ -230,7 +227,7 @@ int main()
         w.initializer("Random");
         w.topology.pgBest();
         w.repair.random();
-        w.strategy.velocityDriven(2, 2, 0.9, 0.5 * 100 / MAXFES);
+        w.strategy.velocityDriven(2, 2, 0.9, 0.4);
         w.generator.orderedConstruct();
         w.evaluator.basic();
         w.selector.index(false);
@@ -267,7 +264,7 @@ int main()
         w.initializer("Random");
         w.topology.pgBest();
         w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });   // obj,c,w_ini, v_heuristic,f_heuristic, w_att
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });   // obj,c,w_ini,v_heuristic,f_heuristic,w_final
         w.generator.orderedConstruct();
         w.evaluator.basic();
         w.selector.index(false);
@@ -276,7 +273,7 @@ int main()
         w.initializer("Random");
         w.topology.levelBasedLearning(4);
         w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic();
         w.selector.index(false);
@@ -285,7 +282,7 @@ int main()
         w.initializer("Random");
         w.topology.stochasticDominantLearning();
         w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic();
         w.selector.index(false);
@@ -401,25 +398,25 @@ int main()
     });
     gen("SPSO_1", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.pgBest(); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 0, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 0, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
     gen("SPSO_2", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.pgBest(); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 0, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 0, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
     gen("SPSO_3", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.pgBest(); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 0, 0, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 0, 0, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
     gen("SLLSO_1", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.levelBasedLearning(4); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(true);
     });
@@ -475,19 +472,19 @@ int main()
     });
     gen("random+SPSO", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.randomLearning(2); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
     gen("roulrtte+SPSO", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.roulette(2); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
     gen("championship+SPSO", 100, [](WorkflowSetter& w) {
         w.initializer("Random"); w.topology.tournament(2, 2); w.repair.random();
-        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.5 * 100 / MAXFES });
+        w.strategy.set("SetVelocityDriven", { 2, 2, 0.9, 1, 1, 0.4 });
         w.generator.orderedConstruct();
         w.evaluator.basic(); w.selector.index(false);
     });
@@ -507,7 +504,7 @@ int main()
     });
     gen("randomConfig_3", 100, [](WorkflowSetter& w) {
         w.initializer("Greedy"); w.topology.tournament(2, 2); w.repair.random();
-        w.strategy.velocityDriven(2, 2, 0.9, 0.5 * 100 / MAXFES);
+        w.strategy.velocityDriven(2, 2, 0.9, 0.4);
         w.generator.generation();
         w.evaluator.basic(); w.selector.close(true);
     });

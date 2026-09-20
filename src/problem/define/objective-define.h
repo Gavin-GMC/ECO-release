@@ -1,27 +1,23 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // ObjectiveDefine:问题目标域的定义切片(原单体 Problem 的目标部分)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include <stdexcept>
 #include "objective.h"
-#include "ecflow-calculator.h"
-#include "ecflow-functor.hpp"
+#include "evoflow-calculator.h"
+#include "evoflow-functor.hpp"
 #include "ExprTree.h"
 #include "variable.h"
-#include "ecflow-basicfunc.h"   // stringSplit
+#include "evoflow-basicfunc.h"   // stringSplit
 #include "calc-spec.h"
 #include "objective-manager.h"
+#include "problem-info.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class ObjectiveDefine
     {
@@ -49,7 +45,9 @@ namespace ECFlow
                 if (s.name == name)
                     throw std::invalid_argument("ObjectiveDefine: duplicate objective name - " + name);
         }
-        static Calculator* _buildCalculator(const CalcSpec& spec, const std::vector<std::string>& names)
+        static Calculator* _buildCalculator(const CalcSpec& spec,
+                                            const std::vector<std::string>& names,
+                                            const VariableManager& var)
         {
             const int n = static_cast<int>(names.size());
             switch (spec.kind)
@@ -59,7 +57,19 @@ namespace ECFlow
             case CalcKind::formula:
             {
                 std::vector<ElementNote> notes(n);
-                for (int i = 0; i < n; i++) { notes[i]._name = names[i]; notes[i]._length = 1; }
+                for (int i = 0; i < n; i++)
+                {
+                    int vid = var.getVariableId(names[i]);
+                    if (vid < 0)
+                        throw std::invalid_argument(
+                            "ObjectiveDefine::compile: formula input variable not found - "
+                            + names[i]);
+                    // TreeCalculator uses ElementNote shape while compiling indexed
+                    // variables. Copy the real note so x[1], matrices and constants
+                    // retain their declared extents; the old synthetic length=1 note
+                    // made every index above zero fail before evaluation.
+                    notes[i] = var.variables[vid].note;
+                }
                 return new TreeCalculator(spec.formula, notes.data(), n, 1);
             }
             default: return nullptr;
@@ -90,6 +100,21 @@ namespace ECFlow
         void clear() { _specs.clear(); _full_evaluate = true; }   // reset specs + own flags
         int getObjectiveNumber() const { return static_cast<int>(_specs.size()); }
         std::string getObjectiveName(int oid) const { return _specs[oid].name; }
+        std::vector<ProblemObjectiveInfo> describeObjectives() const
+        {
+            std::vector<ProblemObjectiveInfo> out;
+            out.reserve(_specs.size());
+            for (const Spec& s : _specs)
+            {
+                ProblemObjectiveInfo o;
+                o.name = s.name;
+                o.variables = s.input_variables;
+                o.minimize = s.min_is_better;
+                o.priority = s.priority;
+                out.push_back(std::move(o));
+            }
+            return out;
+        }
 
         // Optional definition-side evaluation mode (2.5): set on the definition and
         // carried into the manager by compile(); the manager can also change it later.
@@ -132,7 +157,7 @@ namespace ECFlow
             {
                 const Spec& s = _specs[i];
                 Objective tmp(s.name, s.priority, s.min_is_better);
-                tmp.setCalculator(_buildCalculator(s.calc, s.input_variables));   // may throw (bad formula)
+                tmp.setCalculator(_buildCalculator(s.calc, s.input_variables, var));   // may throw (bad formula)
                 om.objectives[i].copy(&tmp);
                 om.objective_variable_index[i].resize(s.input_variables.size());
                 for (int j = 0; j < (int)s.input_variables.size(); j++)

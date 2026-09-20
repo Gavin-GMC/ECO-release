@@ -1,26 +1,21 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 基础交叉算子:PointCrossover(点交叉)/ UniformCrossover(均匀交叉)/ SBXCrossover(模拟二进制交叉)/ DifferenceCrossover(差分交叉)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <cstring>
 #include <algorithm>
-#include "ecflow-constant.h"
-#include "ecflow-basicfunc.h"
+#include "evoflow-constant.h"
+#include "evoflow-basicfunc.h"
 #include "individual.h"
 #include "problem-handle.h"
 #include "comparer.hpp"
 #include "lstrategy-crossover.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 点交叉:交换交叉点位之间的片段
     class PointCrossover : public Crossover
@@ -61,9 +56,9 @@ namespace ECFlow
             {
                 for (int i = 0; i < _point_number; i++)
                 {
-                    points[i] = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                    points[i] = EvoFlow::get_int(0, s->getSolutionSize() - 1);
                     while (isRepeat(i))
-                        points[i] = ECFlow::get_int(0, s->getSolutionSize() - 1);
+                        points[i] = EvoFlow::get_int(0, s->getSolutionSize() - 1);
                 }
                 std::sort(points, points + _point_number);
             }
@@ -363,8 +358,8 @@ namespace ECFlow
             [](AssertList& L, const double* p) { DifferenceCrossover::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { DifferenceCrossover::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_cross_point,      LearningStrategy, pointCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_uniform,    LearningStrategy, uniformCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_sbx,        LearningStrategy, sbxCrossoverEntry());
-    ECFLOW_REGISTER(lstrat_cross_difference, LearningStrategy, differenceCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_point,      LearningStrategy, pointCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_uniform,    LearningStrategy, uniformCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_sbx,        LearningStrategy, sbxCrossoverEntry());
+    EVOFLOW_REGISTER(lstrat_cross_difference, LearningStrategy, differenceCrossoverEntry());
 }

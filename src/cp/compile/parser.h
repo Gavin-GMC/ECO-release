@@ -1,4 +1,6 @@
-﻿#pragma once
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
 //
 // cp/compile/parser.h
 //
@@ -17,7 +19,7 @@
 #include <vector>
 #include "cp/compile/program.h"
 
-namespace ECFlow {
+namespace EvoFlow {
 
 class Parser {
 public:
@@ -162,4 +164,4 @@ private:
     std::vector<std::pair<std::string, double>> entries_;
 };
 
-} // namespace ECFlow
+} // namespace EvoFlow

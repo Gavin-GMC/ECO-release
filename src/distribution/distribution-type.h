@@ -1,16 +1,11 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 分布模型的类别枚举(DistributionType)——库支持的全部分布模型种类。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 
-namespace ECFlow
+namespace EvoFlow
 {
     enum class DistributionType
     {

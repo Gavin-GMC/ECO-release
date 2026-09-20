@@ -1,20 +1,13 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 孤立拓扑 IsolateTopology:个体不向任何特定个体学习(每点 0 学习对象),用于独立构造类算法(如 ACO)。
-//-------------------------Reference-------------------------
-// 无特定文献:个体不设学习对象、独立构造(如 ACO 的独立解构建);框架基础拓扑。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class IsolateTopology : public LearningTopology
     {
@@ -57,5 +50,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { IsolateTopology::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { IsolateTopology::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_isolate, LearningTopology, isolateTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_isolate, LearningTopology, isolateTopologyEntry());
 }

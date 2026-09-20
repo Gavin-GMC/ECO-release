@@ -1,16 +1,9 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // SETTER-API:fluent 配置构建。分类 setter(Strategy/Topology/Generator/Selector/Evaluator/Repair)
 //   = 通用 `set(tag,para)` + 核心带参算子的**具名方法**(具名参数给语义提醒);上层 WorkflowSetter/
 //   SubpopulationSetter/ConfigBuilder 装配 WorkflowConfig/SubpopulationConfig/OptimizerConfig。
-//-------------------------Reference-------------------------
-// 重设计自 ECFC原代码/setter-*.h(旧 enum-id+PARANUM → 新 string-tag;分类嵌套结构保留)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <list>
@@ -26,7 +19,7 @@
 #include "config-codec.h"        // ConfigCodecV31(文本)
 #include "config-codec-json.h"   // ConfigCodecV32(JSON)
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 分类 setter 基:持 WorkflowConfig*,固定 c_type,通用 set()
     template <ModuleType CTYPE>
@@ -46,15 +39,31 @@ namespace ECFlow
     {
         using CategorySetter::CategorySetter;
         // PSO/EDA/ACO
-        void velocityDriven(int object_number, double c, double w_ini, double w_attenuation, double vel_init_scale = 0.0) { set("VelocityDriven", { (double)object_number, c, w_ini, w_attenuation, vel_init_scale }); }   // vel_init_scale:0=速度零初始化;>0=值域内 ±k·域宽 随机
-        void setVelocityDriven(int object_number, double c, double w_ini, bool v_heuristic, bool f_heuristic, double w_attenuation) { set("SetVelocityDriven", { (double)object_number, c, w_ini, v_heuristic ? 1.0 : 0.0, f_heuristic ? 1.0 : 0.0, w_attenuation }); }   // 修:原漏 v/f_heuristic(4→6 参)
-        void binaryVelocityDriven(double c1, double c2, double w_ini, double w_attenuation) { set("BinaryVelocityDriven", { c1, c2, w_ini, w_attenuation }); }
+        void velocityDriven(int object_number, double c, double w_ini, double w_final, double vel_init_scale = 0.0) { set("VelocityDriven", { (double)object_number, c, w_ini, w_final, vel_init_scale }); }   // w_final=nan:既有逐维随机惯性;vel_init_scale:0=速度零初始化;>0=值域内 ±k·域宽 随机
+        void setVelocityDriven(int object_number, double c, double w_ini, bool v_heuristic, bool f_heuristic, double w_final) { set("SetVelocityDriven", { (double)object_number, c, w_ini, v_heuristic ? 1.0 : 0.0, f_heuristic ? 1.0 : 0.0, w_final }); }   // w_final=nan:既有每轮随机惯性
+        void binaryVelocityDriven(double c1, double c2, double w_ini, double w_final) { set("BinaryVelocityDriven", { c1, c2, w_ini, w_final }); }   // w_final=nan:既有每轮随机惯性
         void stickyBinary(int c, int ratio_p, int ratio_g, double ustkS) { set("StickyBinary", { (double)c, (double)ratio_p, (double)ratio_g, ustkS }); }   // 粘性 BPSO(i_s=c/N,i_p:i_g,ustkS=8·maxfes/pop/100 手算)
         void distributionEstimation(int model, int good_number, double good_rate) { set("DistributionEstimation", { (double)model, (double)good_number, good_rate }); } // model:1 Gaussian/2 Cauchy/3 Uniform/4 Histogram
         void gaussianOneFifth(double sigma, double adapt) { set("GaussianOneFifth", { sigma, adapt }); }   // ES:1/5 成功规则(初始步长 sigma、调整因子 adapt)
         void gaussianSelfAdapt() { set("GaussianSelfAdapt"); }   // ES:self-adaptive σ(sigma 特性由装配期推断,individual="Individual")
         void cmaes(double sigma) { set("CMAES", { sigma }); }    // CMA-ES(初始步长 sigma;其余从 n/λ 自算)
         void greyWolfEncircling(double a_max = 2.0, double a_min = 0.0) { set("GreyWolfEncircling", { a_max, a_min }); }   // GWO(系数 a 衰减边界,配 TopRanked(3) 拓扑)
+        void sineCosineOscillation(double a = 2.0) { set("SineCosineOscillation", { a }); }   // SCA(振幅 r1=a·(1-progress) 衰减,单向导,配 TopRanked(1) 拓扑)
+        void arithmeticOperatorUpdate(double alpha = 5.0, double moa_min = 0.2, double moa_max = 1.0, double mu = 0.5) { set("ArithmeticOperatorUpdate", { alpha, moa_min, moa_max, mu }); }   // AOA(÷×+− + MOA递增/MOP递减进度门控,单向导,配 TopRanked(1) + Boundary)
+        void reptileEncircling(double alpha = 0.1, double beta = 0.1) { set("ReptileEncircling", { alpha, beta }); }   // RSA(4 相位包围/狩猎,配 LeaderRandomCenter(objects=3) + Boundary)
+        void goldenJackalPincer(double c1 = 1.5, double beta = 1.5) { set("GoldenJackalPincer", { c1, beta }); }   // GJO(雌雄双豺钳形 + 能量衰减 + Levy,配 TopRanked(2) + Boundary)
+        void tunicateJetSwarm(double pmin = 1.0, double pmax = 4.0) { set("TunicateJetSwarm", { pmin, pmax }); }   // TSA(喷射推进 + 群聚阻尼,无状态无进度,配 TopRanked(1) + Boundary)
+        void marinePredatorMotion(double P = 0.5, double fads = 0.2) { set("MarinePredatorMotion", { P, fads }); }   // MPA(3 相位 Brownian/Levy + FADs,配 LeaderTwoRandom(objects=3) + Boundary)
+        void aquilaHunt(double alpha = 0.1, double delta = 0.1, double r1 = 10.0, double U = 0.00565, double omega = 0.005, double theta1 = 4.71238898038469) { set("AquilaHunt", { alpha, delta, r1, U, omega, theta1 }); }   // AO(4 method 相位切换 + Levy + 螺旋;r1/U/omega/theta1 罕调标准常数,配 LeaderRandomCenter + Boundary)
+        void slimeMouldOscillation(double z = 0.03) { set("SlimeMouldOscillation", { z }); }   // SMA(适应度权重 W + 振荡 vb/vc,z 随机重采样概率,配 LeaderTwoRandom(objects=3) + Boundary)
+        void equilibriumUpdate(double a1 = 2.0, double a2 = 1.0, double GP = 0.5, double V = 1.0) { set("EquilibriumUpdate", { a1, a2, GP, V }); }   // EO(平衡池前 4 + 均值,指数质量平衡;a2/GP/V 罕调标准,配 TopRanked(4) + Boundary)
+        void vultureForaging(double L1 = 0.8, double P1 = 0.6, double P2 = 0.4, double P3 = 0.6, double omega = 2.5, double zb = 1.0, double hb = 2.0) { set("VultureForaging", { L1, P1, P2, P3, omega, zb, hb }); }   // AVOA(两领头秃鹫 F 分相位多分支 + 螺旋 + Levy;L1/omega/zb/hb 罕调标准,配 TopRanked(2) + Boundary)
+        void belugaWhalePhases(double wf_max = 0.1, double wf_min = 0.05, double b0_max = 1.0, double c1_fac = 2.0, double c2_fac = 2.0) { set("BelugaWhalePhases", { wf_max, wf_min, b0_max, c1_fac, c2_fac }); }   // BWO(游动跨维/捕食 Levy/鲸落 三相;b0_max/c1_fac/c2_fac 罕调标准,配 LeaderAndRandom + Boundary)
+        void weightedMeanUpdate(double a_base = 2.0, double a_rate = 4.0) { set("WeightedMeanUpdate", { a_base, a_rate }); }   // INFO 阶段1+2(加权均值更新+组合;a_rate 罕调,配 RankExtremesTriRandom + Boundary)
+        void weightedMeanLocalSearch(double prob = 0.5) { set("WeightedMeanLocalSearch", { prob }); }   // INFO 阶段3/通用加权均值局搜(概率施用,配 ContinueRankExtremesTriRandom 续接)
+        void salpChainUpdate(double c1_base = 2.0, double c1_rate = 4.0) { set("SalpChainUpdate", { c1_base, c1_rate }); }   // SSA(领导跟食物+跟随链式平均,并行版;c1_rate 罕调,配 SalpChain + Boundary)
+        void grasshopperSwarm(double f = 0.5, double l = 1.5, double c_max = 1.0, double c_min = 0.00004) { set("GrasshopperSwarm", { f, l, c_max, c_min }); }   // GOA(全群两两社会力 O(n²)+目标吸引;c_max/c_min 罕调,配 TopRanked(1) + Boundary)
+        void dungBeetleRoles(double k = 0.1, double b = 0.3, double S = 0.5, double obstacle_p = 0.1, double p_roll = 0.2, double p_brood = 0.2, double p_forage = 0.233) { set("DungBeetleRoles", { k, b, S, obstacle_p, p_roll, p_brood, p_forage }); }   // DBO(四角色滚球/繁殖/觅食/偷窃;k/b/S/obstacle_p 罕调,配 DungBeetleRefs + Boundary)
         void whaleForaging(double a_max = 2.0, double a_min = 0.0, double b = 1.0) { set("WhaleForaging", { a_max, a_min, b }); }   // WOA(a 衰减边界 + 螺旋常数 b,配 LeaderAndRandom 拓扑;whalestate 由装配期推断)
         void affinityHypermutation(double sigma = 0.3, double base_rate = 0.6, double rho = 4.0) { set("AffinityHypermutation", { sigma, base_rate, rho }); }   // 免疫超变异(门控率装饰器包 Gauss,亲和度反比变异率,配 ClonalExpansion)
         void randomGeneration() { set("RandomGeneration"); }   // 域内随机重采样(感受器编辑用,配 RandomSelect + WorstReplace)
@@ -64,6 +73,7 @@ namespace ECFlow
         // inner_para **无默认值,必须显式给** —— 5 个内层算子(Overturn/Insert/Exchange/SegmentRelocate/Reorder)
         //   全为 {times, mutation_rate} 两参,**没有零参的** → 缺省空 vector 永远是错的:工厂把 `p + 2` 交给内层
         //   算子,para 只有 2 个时内层读的是**越界内存**。原 `= {}` 使 tabuDecorator(0,7) 看着合法却必错,
+        //   v1.4.6.4 去掉默认值 → 编译期即拦下(早于装配期的 ParamMatcher)。
         void tabuDecorator(int inner, int tenure, std::vector<double> inner_para) { std::vector<double> v{ (double)inner, (double)tenure }; for (double x : inner_para) v.push_back(x); set("TabuDecorator", std::move(v)); }
         void tabuBit(int tenure) { set("TabuBit", { (double)tenure }); }   // 自带点变异邻域禁忌(主动选非禁忌维、取域内随机值,通用编码)
         void antSystem(std::vector<double> para) { set("AntSystem", std::move(para)); }              // alpha,belta,rho,tao_ini,...
@@ -140,6 +150,12 @@ namespace ECFlow
         void uniform(int object_number) { set("Uniform", { (double)object_number }); }
         void topRanked(int leader_count) { set("TopRanked", { (double)leader_count }); }   // 通用前 K 名(GWO 用 3=α/β/δ)
         void leaderAndRandom() { set("LeaderAndRandom"); }   // 领袖(全局最优)+ 随机个体(WOA 用:end[0]=领袖,end[1]=随机鲸)
+        void leaderRandomCenter() { set("LeaderRandomCenter"); }   // 领袖 + 随机 + 逐维种群均值(RSA 用:end[0]=最优,end[1]=随机,end[2]=中心)
+        void leaderTwoRandom() { set("LeaderTwoRandom"); }   // 领袖 + 两随机(MPA 用:end[0]=最优,end[1]/[2]=两随机猎物,供 FADs 差分)
+        void rankExtremesTriRandom() { set("RankExtremesTriRandom"); }   // best/better/worst + 3 排序随机(INFO 更新段用;起点=种群)
+        void continueRankExtremesTriRandom() { set("ContinueRankExtremesTriRandom"); }   // 同上但起点=上段子代(INFO 局搜段续接用)
+        void salpChain() { set("SalpChain"); }   // 海鞘链:end[0]=食物(最优),end[1]=链上前一只(领导 index0 为空)(SSA 用)
+        void dungBeetleRefs() { set("DungBeetleRefs"); }   // end[0]=全局最优,end[1]=当代最优,end[2]=当代最差(DBO 用)
         void neighborhood(int T, double delta = 0.9) { set("Neighborhood", { (double)T, delta }); }   // MOEA/D 邻域交配(T 邻域大小、δ 邻域交配概率;配 ScalarReplace,T 须一致)
         void clonalExpansion(double clone_factor = 1.0) { set("ClonalExpansion", { clone_factor }); }   // 免疫克隆扩增(好抗体克隆更多,N_c∝亲和度排名)
         void randomSelect(int count) { set("RandomSelect", { (double)count }); }   // 随机选 d 个起点(感受器编辑:多产 d 个新解)
@@ -222,6 +238,7 @@ namespace ECFlow
     public:
         SubpopulationSetter(SubpopulationConfig* pc) : _pc(pc) {}
         SubpopulationSetter& tag(const std::string& t) { _pc->tag = t; return *this; }
+        // v1.4.8:**删除 individualType()** —— 个体只剩基类、行为由装配期推断的特性决定,无类型可指定。
         SubpopulationSetter& size(int n) { _pc->size = n; return *this; }
         SubpopulationSetter& workflow(const std::string& t) { _pc->workflow_tag = t; return *this; }
         SubpopulationSetter& archive(const std::string& t, std::vector<double> para = {}) { _pc->archive_tag = t; _pc->archive_para = std::move(para); return *this; }
@@ -260,7 +277,11 @@ namespace ECFlow
         ConfigBuilder& cooperationConstructer(const std::string& t, std::vector<double> para = {}) { _cfg.cooperation.constructer_tag = t; _cfg.cooperation.constructer_para = std::move(para); return *this; }
         ConfigBuilder& cooperationTopology(const std::string& t, std::vector<double> para = {}) { _cfg.cooperation.topology_tag = t; _cfg.cooperation.topology_para = std::move(para); return *this; }
         ConfigBuilder& gArchive(const std::string& t, std::vector<double> para = {}) { _cfg.g_archive_tag = t; _cfg.g_archive_para = std::move(para); return *this; }
-        ConfigBuilder& logging(bool result, bool process = false, bool full_process = false) { _cfg.logger_full_result = result; _cfg.logger_process = process; _cfg.logger_full_process = full_process; return *this; }
+        // swarm:.prcs 每代 best 之后再打整群(逐代 × 种群规模,体积比只打 best 大一到两个数量级)
+        ConfigBuilder& logging(bool result, bool process = false, bool full_process = false, bool swarm = false) { _cfg.logger_full_result = result; _cfg.logger_process = process; _cfg.logger_full_process = full_process; _cfg.logger_swarm = swarm; return *this; }
+        // 进度回显到控制台。【不并入 logging()】—— logging() 说的是"记什么",本项说的是"进度显示到哪",
+        //   语义不同类;且 logging() 已是四个匿名 bool,再加第五个调用点将不可读。不落 .cfg(仅运行期,同 CLI -v)。
+        ConfigBuilder& consoleEcho(bool on = true) { _cfg.logger_console_echo = on; return *this; }
 
         OptimizerConfig& config() { return _cfg; }
 
@@ -274,7 +295,7 @@ namespace ECFlow
 
         // ======== 配置文件 save/load(CONFIG-IO,v1.4.5)========
         //   统一后缀 **.cfg**(纯文本);不同版本均 .cfg,**仅由首行版本分派**(不用后缀区分)。
-        //   参考原 ecflow-builder 的 saveConfigure/loadConfigure 流程(格式/codec 已弃,仅流程)。
+        //   参考原 evoflow-builder 的 saveConfigure/loadConfigure 流程(格式/codec 已弃,仅流程)。
         //   静态、以 FullConfig 为界面 → ConfigBuilder(fluent) 与 config-generate(直填 FullConfig) 共用。
 
         // 首行版本探测:JSON('{' 开头)→ v3.2;文本 `<ver= vX.Y>` → 提取 vX.Y;不可识别 → 空串。

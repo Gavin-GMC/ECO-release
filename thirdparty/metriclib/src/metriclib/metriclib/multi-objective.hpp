@@ -84,7 +84,7 @@ namespace MetricLib {
      * @param object_number 目标维度
      * @return GD值
      */
-    double gd(double** input, double** refer_point, int size, int refer_size, int object_number) {
+    inline double gd(double** input, double** refer_point, int size, int refer_size, int object_number) {
         if (size == 0 || refer_size == 0) return 0.0;
 
         double total_dist = 0.0;
@@ -115,7 +115,7 @@ namespace MetricLib {
      * @param object_number 目标维度
      * @return IGD值
      */
-    double igd(double** input, double** refer_point, int size, int refer_size, int object_number) {
+    inline double igd(double** input, double** refer_point, int size, int refer_size, int object_number) {
         if (size == 0 || refer_size == 0) return 0.0;
 
         double total_dist = 0.0;
@@ -144,7 +144,7 @@ namespace MetricLib {
      * @param demension 目标维度
      * @return 超体积值
      */
-    double _hv_iter(double** input, int size, int demension) {
+    inline double _hv_iter(double** input, int size, int demension) {
         if (demension == 1) {
             double max_val = input[0][0];
             for (int i = 0; i < size; ++i) {
@@ -209,7 +209,7 @@ namespace MetricLib {
      * @param object_number 目标维度
      * @return 超体积值
      */
-    double hv_math(double** input, double* refer_point, int size, int object_number) {
+    inline double hv_math(double** input, double* refer_point, int size, int object_number) {
         if (size == 0 || object_number == 0) return 0.0;
 
         double hv_total = 0.0;
@@ -283,7 +283,7 @@ namespace MetricLib {
      * @param object_number 目标维度
      * @return 超体积估计值
      */
-    double hv_montecarlo(double** input, double* refer_point, int size, int object_number) {
+    inline double hv_montecarlo(double** input, double* refer_point, int size, int object_number) {
         if (size == 0 || object_number == 0) return 0.0;
 
         // 步骤1：计算采样空间的上下界
@@ -357,7 +357,7 @@ namespace MetricLib {
      * @param global_min_is_better 整体优化方向（仅当min_is_better为nullptr时生效），默认true（所有目标最小化）
      * @return Coverage(A,B)值：B中被A支配的解的比例 (0≤C≤1)
      */
-    double coverage(double** setA, int sizeA, double** setB, int sizeB, int object_number,
+    inline double coverage(double** setA, int sizeA, double** setB, int sizeB, int object_number,
         const bool* min_is_better = nullptr,
         bool global_min_is_better = true) {
         if (sizeA == 0 || sizeB == 0) return 0.0;

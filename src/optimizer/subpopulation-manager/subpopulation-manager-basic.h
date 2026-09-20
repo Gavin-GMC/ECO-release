@@ -1,24 +1,19 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 常用子种群管理器(4 种)→ Registry<SubpopulationManager>:
 //   NoInteraction(子群互不干预)/ RebuildTopology(每代重构子群+重建拓扑)/
 //   ImmigrantModel(向邻居迁入本群最优个体)/ SingleSwarm(单子群,自建 Fixed+NoConnect)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "subpopulation-manager.h"
 #include "subpopulation-constructer.h"
 #include "subpopulation-topology-basic.h"
 #include "registry.h"
-#include "ecflow-rand.h"
-#include "ecflow-constant.h"
+#include "evoflow-rand.h"
+#include "evoflow-constant.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 子群互不干预(支持多子群:各群独立演化,群间无动作 —— 与 SingleSwarm 语义不同,见文件头注)
     class NoInteraction final : public SubpopulationManager
@@ -103,6 +98,9 @@ namespace ECFlow
         }
         ~SingleSwarm() {}
         // 单子群无群间结构:两个钩子均不覆写。
+        // v2.5.3:过程日志两级化对单子群**不特殊化**——单子群也产全局级 _<run>.prcs + 子群级 _<run>_<id>.prcs,
+        //   格式与多子群统一(用户定:去 single 特殊化)。分析器收敛曲线由用户 `.swarm(id)` 显式选级,不靠管理器分支。
+        //   v1.4.8 前此处曾是**全仓唯一**做终止器协作的地方(`_terminator_pointer->merge(...)` + `resetTerminator()`),
         //   另外三个 manager 一概没写 → 全局预算在它们下面完全失效。现已上移至基类 runEpoch 统一包办。
     };
 
@@ -134,8 +132,8 @@ namespace ECFlow
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
 
-    ECFLOW_REGISTER(smgr_nointeraction, SubpopulationManager, noInteractionManagerEntry());
-    ECFLOW_REGISTER(smgr_rebuild,       SubpopulationManager, rebuildTopologyManagerEntry());
-    ECFLOW_REGISTER(smgr_immigrant,     SubpopulationManager, immigrantManagerEntry());
-    ECFLOW_REGISTER(smgr_single,        SubpopulationManager, singleSwarmManagerEntry());
+    EVOFLOW_REGISTER(smgr_nointeraction, SubpopulationManager, noInteractionManagerEntry());
+    EVOFLOW_REGISTER(smgr_rebuild,       SubpopulationManager, rebuildTopologyManagerEntry());
+    EVOFLOW_REGISTER(smgr_immigrant,     SubpopulationManager, immigrantManagerEntry());
+    EVOFLOW_REGISTER(smgr_single,        SubpopulationManager, singleSwarmManagerEntry());
 }

@@ -1,25 +1,20 @@
 //------------------------Description------------------------
 // 水波类两个激活拓扑(源自 Water Wave Optimization 的折射/碎波触发条件):
 //   WaveRefractionActivation —— 波高 h 降到 0 的波才激活,学习对象 = **档案最优 x***;其余空指针透传。
-//   NewBestActivation        —— **自持上一轮档案最优的拷贝**,仅当本轮出现"新最优"才激活(对该最优个体产 k 个孤立波)。
+
 //-------------------------Reference-------------------------
 // Zheng, Y.-J. "Water wave optimization: A new nature-inspired metaheuristic."
 //   Computers & Operations Research, 55:1-11, 2015.
 //   折射条件:h 降到 0;折射用 x*(至今最优)。碎波条件:传播**产生新最优**时对其碎波(非每代)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-topology.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 折射激活:h≤0 的波 → 起点=自身、学习对象=档案最优 x*;其余 → 空指针透传
     class WaveRefractionActivation : public LearningTopology
@@ -33,6 +28,8 @@ namespace ECFlow
         {
             list.add(new Assert(ModuleType::T_learntopology, "objects", 1, MatchType::postAssert));       // 供 x*
             list.add(new Assert(ModuleType::T_learntopology, "graphScale", 100, MatchType::postAssert));
+            // 本拓扑以 wavestate.h 为条件；与重置 h 的折射策略组合时必须有其它段推进 h。
+            list.add(new Assert(ModuleType::T_learntopology, "waveHeightActivation", 1, MatchType::postAssert));
         }
 
         void ini() override {}
@@ -64,7 +61,7 @@ namespace ECFlow
             [](AssertList& L, const double* p) { WaveRefractionActivation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { WaveRefractionActivation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_waverefractionactivation, LearningTopology, waveRefractionActivationEntry());
+    EVOFLOW_REGISTER(ltopo_waverefractionactivation, LearningTopology, waveRefractionActivationEntry());
 
     // 新最优激活:自持上轮档案最优拷贝;仅当本轮 elite 更优(出了新最优)→ 对种群最优个体产 k~U[1,k_max] 个起点
     class NewBestActivation : public LearningTopology
@@ -134,5 +131,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { NewBestActivation::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { NewBestActivation::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_newbestactivation, LearningTopology, newBestActivationEntry());
+    EVOFLOW_REGISTER(ltopo_newbestactivation, LearningTopology, newBestActivationEntry());
 }

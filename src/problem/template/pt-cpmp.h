@@ -1,18 +1,17 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 带容量 p-中位 (Capacitated p-Median Problem) 问题模板。
+
 //-------------------------Reference-------------------------
 // Lorena & Senne、Stefanello et al.、Gnägi & Baumann 的 CPMP test bed(FrontierCO 的 CPMP 来源)。
 // 启发式参考:Mulvey & Beck (1984) regret 构造;Ahmadi & Osman (2004) 密度型 desirability。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
+#include "evoflow-math.h"       // T-DIST-UNIFY:共享 DistanceType/RoundType + metricDistance/applyRound
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -21,17 +20,21 @@
 #include <cmath>
 #include "logger.hpp"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_CPMP
+    class PT_CPMP : public ProblemTemplate
     {
     public:
         enum class Heuristic { GreedySeed, Composite };
+        // 距离/取整类型已上移至 evoflow-math.h(全库唯一,T-DIST-UNIFY);本类直接引用 EvoFlow::DistanceType/RoundType。
     private:
         static constexpr int KNN_LIMIT = 5000;   // N 超此值则 Composite 关闭 k-近邻(密度/覆盖项)
         std::string         _name = "cpmp";
         int                 _N = 0, _p = 0;
         std::vector<double> _cap, _dem, _d;       // cap[N], dem[N], d[N*N]
+        std::vector<double> _coord;               // 可选坐标(2N,x/y 交错);非空且 _d 空 → getProblem 惰性建欧氏矩阵
+        DistanceType        _dtype = DistanceType::Euclidean;   // 坐标式距离公式
+        RoundType           _rtype = RoundType::None;           // 坐标式距离取整
         double              _penalty = 0;
         Heuristic           _heur = Heuristic::GreedySeed;
 
@@ -167,9 +170,22 @@ namespace ECFlow
             return Mg;
         }
 
+        // 从坐标惰性建 N×N 距离矩阵(仿 pt-tsp buildDistanceTable)。对角=0(节点作自身中位距离 0,异于 TSP 对角=MAX)。
+        void buildDistanceFromCoord()
+        {
+            _d.assign((size_t)_N * _N, 0.0);   // 对角=0(节点作自身中位距离 0)
+            for (int i = 0; i < _N; ++i)
+                for (int j = 0; j < i; ++j)
+                {
+                    double dd = applyRound(_rtype, metricDistance(_dtype, &_coord[2 * i], &_coord[2 * j], 2));   // T-DIST-UNIFY 共享分派+取整
+                    _d[(size_t)i * _N + j] = _d[(size_t)j * _N + i] = dd;
+                }
+        }
+
     public:
         PT_CPMP() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_CPMP(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { return _N; }
         void setPenalty(double p) { _penalty = p; }
         void setHeuristic(Heuristic h) { _heur = h; }     // 默认 GreedySeed
@@ -178,22 +194,43 @@ namespace ECFlow
         void setData(int N, int p, std::vector<double> cap, std::vector<double> dem, std::vector<double> d)
         { _N = N; _p = p; _cap = std::move(cap); _dem = std::move(dem); _d = std::move(d); }
 
-        void save(bool overwrite = false)
+        // 坐标式输入(仿 pt-tsp setCitys):存坐标,清 _d → getProblem 惰性建矩阵。coord 长 2N(x/y 交错)。
+        void setCoord(int N, int p, std::vector<double> cap, std::vector<double> dem, std::vector<double> coord)
+        { _N = N; _p = p; _cap = std::move(cap); _dem = std::move(dem); _coord = std::move(coord); _d.clear(); }
+        void setEdgeWeightType(DistanceType dtype, RoundType rtype = RoundType::None) { _dtype = dtype; _rtype = rtype; }
+
+        // v1.4.9(T-SAVE):回写 EvoFlow 格式 _pdata/cpmp/<name>.cpmp,含统一行号规范。overwrite=false 不覆盖。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/cpmp/" + _name + ".cpmp";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("CPMP save: file exists (use overwrite): " + path); return; } }
             std::ofstream out(path);
             if (!out) { sys_logger.error("CPMP save: cannot write " + path); return; }
             out << "NAME: " << _name << "\nTYPE: CPMP\nNODES: " << _N << "\nMEDIANS: " << _p << "\n";
-            out << "CAPACITY_SECTION\n"; for (int j = 0; j < _N; ++j) out << (j + 1) << " " << _cap[j] << "\n";
-            out << "DEMAND_SECTION\n";   for (int i = 0; i < _N; ++i) out << (i + 1) << " " << _dem[i] << "\n";
-            out << "DISTANCE_SECTION\n";
-            for (int i = 0; i < _N; ++i) { out << (i + 1); for (int j = 0; j < _N; ++j) out << " " << _d[(size_t)i * _N + j]; out << "\n"; }
+            if (!_coord.empty())   // 坐标式(仿 pt-tsp save 双路):写 EDGE_WEIGHT_TYPE + NODE_COORD_SECTION
+            {
+                const char* ewt = "EUC_2D";                                    // Euclidean+Round
+                if      (_dtype == DistanceType::Manhattan) ewt = "MAN_2D";
+                else if (_rtype == RoundType::Ceil)         ewt = "CEIL_2D";
+                else if (_rtype == RoundType::Floor)        ewt = "FLOOR_2D";
+                out << "EDGE_WEIGHT_TYPE: " << ewt << "\nNODE_COORD_SECTION\n";
+                for (int i = 0; i < _N; ++i) out << (i + 1) << " " << _coord[2 * i] << " " << _coord[2 * i + 1] << "\n";
+                out << "CAPACITY_SECTION\n"; for (int j = 0; j < _N; ++j) out << (j + 1) << " " << _cap[j] << "\n";
+                out << "DEMAND_SECTION\n";   for (int i = 0; i < _N; ++i) out << (i + 1) << " " << _dem[i] << "\n";
+            }
+            else                   // EXPLICIT 显式矩阵(原路径,输出不变)
+            {
+                out << "CAPACITY_SECTION\n"; for (int j = 0; j < _N; ++j) out << (j + 1) << " " << _cap[j] << "\n";
+                out << "DEMAND_SECTION\n";   for (int i = 0; i < _N; ++i) out << (i + 1) << " " << _dem[i] << "\n";
+                out << "DISTANCE_SECTION\n";
+                for (int i = 0; i < _N; ++i) { out << (i + 1); for (int j = 0; j < _N; ++j) out << " " << _d[(size_t)i * _N + j]; out << "\n"; }
+            }
         }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             if (_N == 0) return nullptr;
+            if (_d.empty() && !_coord.empty()) buildDistanceFromCoord();   // 坐标式:惰性建欧氏矩阵(仿 pt-tsp)
             Problem* back = new Problem(_name);
             back->addVariable("x", 0, _N - 1, 1, _N, 1, VariableType::allocation);   // 每节点→中位(单源)
             double pen = (_penalty > 0) ? _penalty : 1e6;
@@ -236,31 +273,58 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "cpmp", "cpmp"));
             if (!f) { sys_logger.error("CPMP instance not found: " + name); return; }
             int N = 0, p = 0; std::string tok; bool ok = true;
-            std::vector<double> cap, dem, d;
+            std::vector<double> cap, dem, d, coord;
+            bool useCoord = false;                                   // EDGE_WEIGHT_TYPE 非 EXPLICIT → 坐标式
+            DistanceType dt = DistanceType::Euclidean; RoundType rt = RoundType::None;
             auto need = [&]() -> bool   // 段必须在 NODES 计数之后
             { if (N <= 0) { sys_logger.error("CPMP '" + name + "': section before NODES"); return false; } return true; };
-            // 统一行号规范:每逻辑行以 1-based 索引开头(读入即忽略)。向量=每元素一行 `idx val`;矩阵=每行 `idx v0..v_{N-1}`。
+            // 统一行号规范(v1.4.9):每逻辑行以 1-based 索引开头(读入即忽略)。向量=每元素一行 `idx val`;矩阵=每行 `idx v0..v_{N-1}`。
             std::string idx;
             auto rdv = [&](std::vector<double>& v, int n) { v.assign(n, 0); for (int i = 0; i < n && ok; ++i) if (!(f >> idx >> v[i])) ok = false; };
             auto rdm = [&](std::vector<double>& v, int rows, int cols) { v.assign((size_t)rows * cols, 0); for (int r = 0; r < rows && ok; ++r) { if (!(f >> idx)) { ok = false; break; } for (int cc = 0; cc < cols && ok; ++cc) if (!(f >> v[(size_t)r * cols + cc])) ok = false; } };
+            auto rdc = [&](std::vector<double>& v, int n) { v.assign((size_t)n * 2, 0); for (int i = 0; i < n && ok; ++i) if (!(f >> idx >> v[2 * i] >> v[2 * i + 1])) ok = false; };   // 坐标段:每行 `idx x y`
             while (ok && f >> tok)
             {
                 if (tok == "NODES:") f >> N;
                 else if (tok == "MEDIANS:") f >> p;
-                else if (tok == "CAPACITY_SECTION") { if (!(ok = need())) break; rdv(cap, N); }
-                else if (tok == "DEMAND_SECTION")   { if (!(ok = need())) break; rdv(dem, N); }
-                else if (tok == "DISTANCE_SECTION") { if (!(ok = need())) break; rdm(d, N, N); }
+                else if (tok == "EDGE_WEIGHT_TYPE:")   // 显式编码(仿 pt-tsp):EXPLICIT=矩阵;其余=坐标式+距离公式/取整
+                {
+                    std::string t; f >> t;
+                    if      (t == "EXPLICIT") { useCoord = false; }
+                    else if (t == "EUC_2D")   { useCoord = true; dt = DistanceType::Euclidean; rt = RoundType::Round; }
+                    else if (t == "CEIL_2D")  { useCoord = true; dt = DistanceType::Euclidean; rt = RoundType::Ceil;  }
+                    else if (t == "FLOOR_2D") { useCoord = true; dt = DistanceType::Euclidean; rt = RoundType::Floor; }   // FrontierCO CPMP(对齐 eval_func 的 floor)
+                    else if (t == "MAN_2D")   { useCoord = true; dt = DistanceType::Manhattan; rt = RoundType::Round; }
+                    else { sys_logger.error("CPMP '" + name + "': unknown EDGE_WEIGHT_TYPE '" + t + "'"); return; }
+                }
+                else if (tok == "CAPACITY_SECTION")   { if (!(ok = need())) break; rdv(cap, N); }
+                else if (tok == "DEMAND_SECTION")     { if (!(ok = need())) break; rdv(dem, N); }
+                else if (tok == "DISTANCE_SECTION")   { if (!(ok = need())) break; rdm(d, N, N); }
+                else if (tok == "NODE_COORD_SECTION") { if (!(ok = need())) break; rdc(coord, N); }
                 else if (!tok.empty() && tok.back() == ':') { std::string rest; std::getline(f, rest); }
             }
             if (!ok) { sys_logger.error("CPMP '" + name + "': section truncated"); return; }
             if (N <= 0 || p <= 0 || p > N) { sys_logger.error("CPMP '" + name + "': invalid NODES/MEDIANS"); return; }
-            setData(N, p, cap, dem, d);
+            if (useCoord)   // 坐标式:矩阵留空,getProblem 惰性建(EDGE_WEIGHT_TYPE 指定公式/取整)
+            {
+                if ((int)coord.size() != 2 * N) { sys_logger.error("CPMP '" + name + "': coord mode but NODE_COORD_SECTION missing/incomplete"); return; }
+                setEdgeWeightType(dt, rt);
+                setCoord(N, p, cap, dem, coord);
+            }
+            else            // EXPLICIT(默认):显式距离矩阵
+            {
+                if ((int)d.size() != (size_t)N * N) { sys_logger.error("CPMP '" + name + "': EXPLICIT mode but DISTANCE_SECTION missing/incomplete"); return; }
+                setData(N, p, cap, dem, d);
+            }
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(cpmp, "CPMP", EvoFlow::PT_CPMP);

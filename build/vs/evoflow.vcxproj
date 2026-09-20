@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6291E5FC-62E6-4B2B-9E66-5EBE5D954510}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+    <RootNamespace>evoflow</RootNamespace>
+    <ProjectName>evoflow</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <EvoFlowSourceRoot Condition="'$(EvoFlowSourceRoot)'==''">$(SolutionDir)..\..</EvoFlowSourceRoot>
+    <EvoFlowBuildRoot Condition="'$(EvoFlowBuildRoot)'==''">$(EvoFlowSourceRoot)\obj-vs-release</EvoFlowBuildRoot>
+    <EvoFlowOutputDirectory Condition="'$(EvoFlowOutputDirectory)'==''">$(EvoFlowSourceRoot)</EvoFlowOutputDirectory>
+    <NMakeBuildCommandLine>cmake -S "$(EvoFlowSourceRoot)" -B "$(EvoFlowBuildRoot)" -G "Visual Studio 17 2022" -A x64 -DEVOFLOW_RUNTIME_OUTPUT_DIRECTORY="$(EvoFlowOutputDirectory)" &amp;&amp; cmake --build "$(EvoFlowBuildRoot)" --config Release</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cmake -S "$(EvoFlowSourceRoot)" -B "$(EvoFlowBuildRoot)" -G "Visual Studio 17 2022" -A x64 -DEVOFLOW_RUNTIME_OUTPUT_DIRECTORY="$(EvoFlowOutputDirectory)" &amp;&amp; cmake --build "$(EvoFlowBuildRoot)" --config Release --clean-first</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cmake --build "$(EvoFlowBuildRoot)" --config Release --target clean</NMakeCleanCommandLine>
+    <NMakeOutput>$(EvoFlowOutputDirectory)\evoflow.exe</NMakeOutput>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

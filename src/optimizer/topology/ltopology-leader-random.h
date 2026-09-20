@@ -1,23 +1,16 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 领袖+随机学习拓扑 LeaderAndRandom:每个体获得两个学习对象——end[0]=领袖(全局最优)、end[1]=一个随机个体。
 //   为 WOA(领袖收缩/螺旋 + 随机鲸探索)等"最优引导 + 随机探索"类策略提供数据;通用可复用(如 DE current-to-best/rand)。
-//-------------------------Reference-------------------------
-// 无特定文献:通用"最优 + 随机"两学习对象拓扑,供 WOA(WhaleForaging)等复用。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include "learning-topology.h"
 #include "best-archive.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class LeaderAndRandom : public LearningTopology
     {
@@ -58,7 +51,7 @@ namespace ECFlow
             {
                 graph->addStart(&(*cswarm)[i]);
                 graph->addEnd(leader);                                                // end[0] = 领袖鲸(全局最优)
-                graph->addEnd(&(*cswarm)[ECFlow::get_int(0, N - 1)].solution);          // end[1] = 随机鲸(每个体各取)
+                graph->addEnd(&(*cswarm)[EvoFlow::get_int(0, N - 1)].solution);          // end[1] = 随机鲸(每个体各取)
             }
             return graph;
         }
@@ -71,5 +64,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { LeaderAndRandom::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { LeaderAndRandom::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_leaderrandom, LearningTopology, leaderAndRandomEntry());
+    EVOFLOW_REGISTER(ltopo_leaderrandom, LearningTopology, leaderAndRandomEntry());
 }

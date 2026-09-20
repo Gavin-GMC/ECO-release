@@ -1,16 +1,12 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 烟花爆炸拓扑 FireworkExplosion:每个烟花按适应度好坏爆炸出不同数目的火花(好烟花产更多火花)。
 //   火花数 S_i ∝ (烟花 i 比最差好多少),截断到 [a·M, b·M];起点=烟花(重复 S_i 次),无学习对象(自扰动)。
+
 //-------------------------Reference-------------------------
 // Y. Tan, Y. Zhu, "Fireworks Algorithm for Optimization," ICSI 2010, LNCS 6145, pp. 355-364,
 // doi: 10.1007/978-3-642-13495-1_44.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -18,7 +14,7 @@
 #include "learning-topology.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class FireworkExplosion : public LearningTopology
     {
@@ -101,5 +97,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { FireworkExplosion::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { FireworkExplosion::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_fireworkexplosion, LearningTopology, fireworkExplosionEntry());
+    EVOFLOW_REGISTER(ltopo_fireworkexplosion, LearningTopology, fireworkExplosionEntry());
 }

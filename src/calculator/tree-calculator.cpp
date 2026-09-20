@@ -1,9 +1,11 @@
-#include"ecflow-calculator.h"
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include"evoflow-calculator.h"
 
 #include"ExprTree.h"
 #include<stdexcept>
 
-using namespace ECFlow;
+using namespace EvoFlow;
 
 TreeCalculator::TreeCalculator(ExpressionTree* tree, int parameter_number, int result_size)
 	:Calculator(parameter_number, result_size)

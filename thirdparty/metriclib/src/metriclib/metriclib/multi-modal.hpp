@@ -18,7 +18,7 @@ namespace MetricLib
      * @param accuracy_d 距离精度阈值（小于该值认为解覆盖对应峰值）
      * @return 峰值覆盖率（覆盖峰值数 / 参考峰值总数）
      */
-    double peakRatio(const double** input, const double** refer_point, int size, int refer_size, int demension, double accuracy_d = 1e-3)
+    inline double peakRatio(const double** input, const double** refer_point, int size, int refer_size, int demension, double accuracy_d = 1e-3)
     {
         // 入参合法性校验
         if (input == nullptr || refer_point == nullptr || size <= 0 || refer_size <= 0 || demension <= 0) {
@@ -66,7 +66,7 @@ namespace MetricLib
      * @param accuracy_d 距离精度阈值（小于该值认为解覆盖对应峰值）
      * @return 峰值覆盖率（去重后覆盖峰值数 / 参考峰值总数）
      */
-    double peakRatio(const double* input_fitness, const double** input_decision, int size, double refer_fitness,
+    inline double peakRatio(const double* input_fitness, const double** input_decision, int size, double refer_fitness,
         const double** refer_point, int refer_size, int demension,
         double accuracy_f = 1e-3, double accuracy_d = 1e-3)
     {
@@ -160,7 +160,7 @@ namespace MetricLib
      * @param demension 解/峰值的维度
      * @return 平均峰值距离（值越小，解越接近参考峰值）
      */
-    double peakDistance(const double** input, const double** refer_point, int size, int refer_size, int demension)
+    inline double peakDistance(const double** input, const double** refer_point, int size, int refer_size, int demension)
     {
         // 入参合法性校验
         if (input == nullptr || refer_point == nullptr || size <= 0 || refer_size <= 0 || demension <= 0) {
@@ -206,7 +206,7 @@ namespace MetricLib
      * @param demension 解/峰值的维度
      * @return 平均峰值不准确度（值越小，解的适应度越接近参考峰值）
      */
-    double peakInaccuracy(const double* input_fitness, const double** input_decision,
+    inline double peakInaccuracy(const double* input_fitness, const double** input_decision,
         const double* refer_fitness, const double** refer_decision,
         int size, int refer_size, int demension)
     {

@@ -1,20 +1,16 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 鲸鱼优化(Whale Optimization Algorithm, WOA)学习策略 WhaleForaging:向领袖鲸(全局最优)包围收缩/螺旋逼近,
 //   或以概率向随机鲸探索;系数 a 随运行进度在 [a_min,a_max] 间线性衰减(探索→开发)。配 LeaderAndRandom 拓扑。
+
 //-------------------------Reference-------------------------
 // S. Mirjalili, A. Lewis, "The Whale Optimization Algorithm," Advances in Engineering Software,
 // vol. 95, pp. 51-67, 2016, doi: 10.1016/j.advengsoft.2016.01.008.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "solution.h"
 #include "individual.h"
 #include "individual-array.h"
@@ -23,7 +19,7 @@
 #include "terminator.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class WhaleForaging : public LearningStrategy
     {
@@ -107,5 +103,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { WhaleForaging::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { WhaleForaging::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_woa, LearningStrategy, whaleForagingEntry());
+    EVOFLOW_REGISTER(lstrat_woa, LearningStrategy, whaleForagingEntry());
 }

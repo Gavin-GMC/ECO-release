@@ -2,16 +2,8 @@
 // ParamMatcher:装配期**参数模板校验**。按各组件注册项的 ParameterTemplate 校验其 para——
 //   元数 / 留空合法性(allow_empty) / 取值范围 [low,high] / Int·Enum 的整值性。
 //   与 AssertMatcher **并列同层**(前者校"组件间契约",本者校"组件自身参数"),复用其 ValidateResult。
-//-------------------------Reference-------------------------
-// 全新实现。参数模板本意是**给自动化配置程序的机读入口**(parameter-template.h),
-//   本模块只是给这份既有元数据**追加一个消费方**,不改其定位。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -20,7 +12,7 @@
 #include <cmath>
 #include "configure-list.h"
 #include "assert-matcher.h"   // ValidateResult(与断言校验共用报错结构 → 报错风格统一)
-#include "ecflow-constant.h"    // EMPTYVALUE / is_empty
+#include "evoflow-constant.h"    // EMPTYVALUE / is_empty
 #include "registry.h"
 #include "parameter-template.h"
 // 仅需**基类**声明以实例化 Registry<Base>;tag 的自注册由调用方(optimizer-builder.h)的聚合头保证。
@@ -31,7 +23,7 @@
 #include "solution-repairman.h"
 #include "best-archive.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class ParamMatcher
     {
@@ -47,25 +39,27 @@ namespace ECFlow
         }
 
         // 单个参数值 vs 其元信息
-        static void checkValue(const std::string& where, const ParamInfo& pi, double v, ValidateResult& vr)
+        static void checkValue(const std::string& where, const ParamInfo& pi, double v, ValidateResult& vr,
+                               const std::string& srcTag = "", ModuleType srcType = ModuleType::T_default,
+                               int srcIndex = -1)
         {
             if (is_empty(v))   // ★ 先分流:下面的范围比较对 NaN 恒假,直接比会静默放行
             {
                 if (!pi.allow_empty)
-                    vr.errors.push_back(where + "." + pi.name + ": empty(未设置) but allow_empty=false");
+                    vr.addError(where + "." + pi.name + ": empty(未设置) but allow_empty=false", srcTag, srcType, "param_empty_not_allowed", srcIndex);
                 return;        // 允许留空 → 由组件内部回落默认,不再校范围
             }
             if (v < pi.low || v > pi.high)
             {
                 std::ostringstream o;
                 o << where << "." << pi.name << ": " << v << " out of range [" << pi.low << ", " << pi.high << "]";
-                vr.errors.push_back(o.str());
+                vr.addError(o.str(), srcTag, srcType, "param_out_of_range", srcIndex);
             }
             if ((pi.kind == ParamKind::Int || pi.kind == ParamKind::Enum) && std::floor(v) != v)
             {
                 std::ostringstream o;
                 o << where << "." << pi.name << ": " << v << " not integral (kind=" << kindName(pi.kind) << ")";
-                vr.errors.push_back(o.str());
+                vr.addError(o.str(), srcTag, srcType, "param_not_integer", srcIndex);
             }
         }
 
@@ -78,31 +72,37 @@ namespace ECFlow
         //   这是本函数唯一容易写错的地方:下一级参数不足时若返回"实际有几个",总数会恰好等于 para.size()
         //   → **元数错被自吞**(如 `Index {2}` 缺 T0/decay 将不报错,而那正是 makeAccept 的越界洞)。
         static size_t walk(const ParameterTemplate& tpl, const std::string& where,
-                           const double* para, size_t n, int depth, ValidateResult& vr)
+                           const double* para, size_t n, int depth, ValidateResult& vr,
+                           const std::string& srcTag = "", ModuleType srcType = ModuleType::T_default,
+                           int srcIndex = -1)
         {
             if (depth > MAX_DEPTH)
             {
                 std::ostringstream o;
                 o << where << ": 渐进披露层数超过上限 " << MAX_DEPTH << " —— 疑为模板 next 自引用成环";
-                vr.errors.push_back(o.str());
+                vr.addError(o.str(), srcTag, srcType, "param_disclosure_cycle", srcIndex);
                 return n;   // 返回"剩余数"使总数恰为 para.size() → 不再叠加一条无意义的元数错
             }
 
             // 校验本级中**实际存在**的那些值(不足的部分由元数错覆盖)
             size_t avail = tpl.count() < n ? tpl.count() : n;
-            for (size_t i = 0; i < avail; i++) checkValue(where, tpl.params[i], para[i], vr);
+            for (size_t i = 0; i < avail; i++)
+                checkValue(where, tpl.params[i], para[i], vr, srcTag, srcType, srcIndex);
 
             // 本级都没给全 → 无法据本级取值问下一级(渐进披露的前提是前级已定)→ 只报本级期望数
             if (n < tpl.count()) return tpl.count();
 
             ParameterTemplate sub = tpl.nextLevel(para, n);   // ★ 传本级切片,非整个 para
             if (sub.count() == 0 && !sub.hasNext()) return tpl.count();   // 无下一级 → 到此为止
-            return tpl.count() + walk(sub, where, para + tpl.count(), n - tpl.count(), depth + 1, vr);
+            return tpl.count() + walk(sub, where, para + tpl.count(), n - tpl.count(), depth + 1,
+                                      vr, srcTag, srcType, srcIndex);
         }
 
         // 对一份模板校验一组 para(逐级渐进披露),结果并入 vr
         static void checkAgainst(const ParameterTemplate& tpl, const std::string& where,
-                                 const std::vector<double>& para, ValidateResult& vr)
+                                 const std::vector<double>& para, ValidateResult& vr,
+                                 const std::string& srcTag = "", ModuleType srcType = ModuleType::T_default,
+                                 int srcIndex = -1)
         {
             // ★ para **全空** = "全用组件内部默认",是平台的合法约定,非"缺参数":
             //   builder 对空 para 传 **nullptr**(`c.para.empty() ? nullptr : c.para.data()`),
@@ -113,24 +113,37 @@ namespace ECFlow
             //   要"只设前几个、后面用默认"→ 显式传 EMPTYVALUE(需 allow_empty),而非省略。
             if (para.empty()) return;
 
-            size_t expect = walk(tpl, where, para.data(), para.size(), 0, vr);
+            size_t expect = walk(tpl, where, para.data(), para.size(), 0, vr, srcTag, srcType, srcIndex);
             if (para.size() != expect)
             {
                 std::ostringstream o;
                 o << where << ": para count " << para.size() << " != expected " << expect;
                 if (tpl.hasNext()) o << " [各级由前级取值渐进披露]";
-                vr.errors.push_back(o.str());
+                vr.addError(o.str(), srcTag, srcType, "param_count_mismatch", srcIndex);
             }
+        }
+
+        // kind 串 → ModuleType(供结构化问题项记录触发组件的类别)
+        static ModuleType typeOfKind(const std::string& k)
+        {
+            if (k == "topology")  return ModuleType::T_learntopology;
+            if (k == "strategy")  return ModuleType::T_learnstrategy;
+            if (k == "generator") return ModuleType::T_offspringgenerator;
+            if (k == "selector")  return ModuleType::T_selector;
+            if (k == "repair")    return ModuleType::T_Repair;
+            if (k == "archive")   return ModuleType::T_bestarchive;
+            return ModuleType::T_default;
         }
 
         // 对一个已定位到 Registry 的组件校验其 para
         template <class Base>
         static void checkComponent(const Registry<Base>& reg, const std::string& kind,
-                                   const std::string& tag, const std::vector<double>& para, ValidateResult& vr)
+                                   const std::string& tag, const std::vector<double>& para,
+                                   ValidateResult& vr, int componentIndex = -1)
         {
             const ParameterTemplate* tpl = reg.params(tag);
             if (tpl == nullptr) return;   // 未注册 tag:由 AssertMatcher 的 N5 管,不在本模块职责
-            checkAgainst(*tpl, kind + " '" + tag + "'", para, vr);
+            checkAgainst(*tpl, kind + " '" + tag + "'", para, vr, tag, typeOfKind(kind), componentIndex);
         }
 
     public:
@@ -149,20 +162,22 @@ namespace ECFlow
         static ValidateResult validate(const WorkflowConfig& wf)
         {
             ValidateResult vr;
-            for (const ComponentConfig& c : wf.components)
+            for (size_t componentIndex = 0; componentIndex < wf.components.size(); componentIndex++)
             {
+                const ComponentConfig& c = wf.components[componentIndex];
+                const int ci = static_cast<int>(componentIndex);
                 switch (c.c_type)
                 {
                 case ModuleType::T_learntopology:
-                    checkComponent(Registry<LearningTopology>::instance(),   "topology",  c.tag, c.para, vr); break;
+                    checkComponent(Registry<LearningTopology>::instance(),   "topology",  c.tag, c.para, vr, ci); break;
                 case ModuleType::T_learnstrategy:
-                    checkComponent(Registry<LearningStrategy>::instance(),   "strategy",  c.tag, c.para, vr); break;
+                    checkComponent(Registry<LearningStrategy>::instance(),   "strategy",  c.tag, c.para, vr, ci); break;
                 case ModuleType::T_offspringgenerator:
-                    checkComponent(Registry<OffspringGenerator>::instance(), "generator", c.tag, c.para, vr); break;
+                    checkComponent(Registry<OffspringGenerator>::instance(), "generator", c.tag, c.para, vr, ci); break;
                 case ModuleType::T_selector:
-                    checkComponent(Registry<EnvirSelect>::instance(),        "selector",  c.tag, c.para, vr); break;
+                    checkComponent(Registry<EnvirSelect>::instance(),        "selector",  c.tag, c.para, vr, ci); break;
                 case ModuleType::T_Repair:
-                    checkComponent(Registry<SolutionRepaireman>::instance(), "repair",    c.tag, c.para, vr); break;
+                    checkComponent(Registry<SolutionRepaireman>::instance(), "repair",    c.tag, c.para, vr, ci); break;
                 default: break;   // evaluator 等无参数模板项
                 }
             }

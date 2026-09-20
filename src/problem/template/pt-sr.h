@@ -1,16 +1,14 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 符号回归 / 基因表达式编程 (Symbolic Regression / Gene Expression Programming) 问题模板。
+
 //-------------------------Reference-------------------------
 // Ferreira (2001) Gene Expression Programming（GEP 定长头/尾编码 + Karva 解码 + RNC 常量域）。
 // DEAP gp 工程实践（primitive set + 保护算子 + ephemeral 随机常量）。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
+
 #pragma once
+#include"problem-template-registry.h"
 #include "pt-instance-path.h"   // v1.4.9:load 路径自适应(短名/完整路径)
 #include "problem.h"
 #include <fstream>
@@ -20,11 +18,11 @@
 #include <queue>
 #include <cmath>
 #include "logger.hpp"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
-    class PT_SR
+    class PT_SR : public ProblemTemplate
     {
     public:
         // 内置函数目录(预支持范围;扩展只需在 arityOf/applyFunc 各加一行)。
@@ -155,7 +153,7 @@ namespace ECFlow
         {
             if (!_constsExplicit.empty()) return _constsExplicit;
             std::vector<double> c(_kc > 0 ? _kc : 1);
-            for (size_t i = 0; i < c.size(); ++i) c[i] = _clo + ECFlow::rand01() * (_chi - _clo);
+            for (size_t i = 0; i < c.size(); ++i) c[i] = _clo + EvoFlow::rand01() * (_chi - _clo);
             return c;
         }
 
@@ -218,7 +216,8 @@ namespace ECFlow
 
     public:
         PT_SR() {}
-        void setName(std::string name) { _name = name; }
+        void setName(std::string name) override { _name = name; }
+        void clear() override { *this = PT_SR(); }   // 无自持裸资源:复位到默认构造态
         int  getProblemSize() { GepSpec sp = makeSpecSizes(); return (sp.head + sp.tail) + sp.tail; } // |g| + |dc|
         ObjMode getMode() const { return _mode; }
 
@@ -242,7 +241,8 @@ namespace ECFlow
         void setData(int nVars, std::vector<double> X, std::vector<double> Y)
         { _mode = ObjMode::Regression; _dataVars = nVars; _X = std::move(X); _Y = std::move(Y); _nPoints = static_cast<int>(_Y.size()); }
 
-        void save(bool overwrite = false)
+        // v1.4.9(T-SAVE):回写回归模式的 EvoFlow 格式 _pdata/sr/<name>.sr(overwrite=false 时不覆盖)。DATA_SECTION 每行 `x0..x_{d-1} y`,无行首索引。
+        void save(bool overwrite = false) override
         {
             std::string path = "_pdata/sr/" + _name + ".sr";
             if (!overwrite) { std::ifstream ex(path); if (ex.good()) { sys_logger.error("SR save: file exists (use overwrite): " + path); return; } }
@@ -261,7 +261,7 @@ namespace ECFlow
         { _mode = ObjMode::Heuristic; _target = target; _targetVar = var; _ruleInput = ruleInput; }
         void setFeatureMap(SrFeatureMap* fm) { _fmap = fm; }
 
-        Problem* getProblem()
+        Problem* getProblem() override
         {
             GepSpec sp;
             sp.funcs = activeFuncs();
@@ -311,7 +311,7 @@ namespace ECFlow
             return back;
         }
 
-        void load(std::string name)
+        void load(std::string name) override
         {
             setName(instanceName(name));
             std::ifstream f(resolveInstancePath(name, "sr", "sr"));
@@ -352,3 +352,6 @@ namespace ECFlow
         }
     };
 }
+
+// —— 自注册到 ProblemTemplateRegistry(按 TYPE 分派;loadProblem 查表构造)——
+EVOFLOW_REGISTER_PROBLEM(sr, "SR", EvoFlow::PT_SR);

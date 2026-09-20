@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 个体基类 Individual:优化器的基本单元,持有一个候选解 + 初始化/比较等操作。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -18,13 +13,13 @@
 #include "comparer.hpp"
 #include "problem-handle.h"
 #include "solution-initializer.h"
-#include "ecflow-assert.h"
+#include "evoflow-assert.h"
 #include "logger.hpp"
 #include "parameter-template.h"
 #include "registry.h"
 #include "feature.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class Individual
     {

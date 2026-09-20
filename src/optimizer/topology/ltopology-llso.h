@@ -1,26 +1,22 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 分层学习拓扑 LevelBasedLearningTopology:按适应度把种群分为若干层级,较低层个体从"更高的两个层级"
 //   各随机选一个优势个体作为学习对象;最高层(最优)不学习。
+
 //-------------------------Reference-------------------------
 // [1] Q. Yang, W.-N. Chen, J. D. Deng, Y. Li, T. Gu, and J. Zhang, "A Level-Based Learning Swarm
 //     Optimizer for Large-Scale Optimization," IEEE Transactions on Evolutionary Computation,
 //     vol. 22, no. 4, pp. 578-594, Aug. 2018, doi: 10.1109/TEVC.2017.2743016.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <cmath>
 #include <utility>
 #include "learning-topology.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class LevelBasedLearningTopology : public LearningTopology
     {
@@ -114,8 +110,8 @@ namespace ECFlow
                 for (int cid = 0; cid < level_capacity && counter < graph_size; cid++) // 计数器避免因最后一层不全导致越界
                 {
                     // 获取学习对象编号:高层 [0,lid) 内先随机选层、再随机选层内位置
-                    sid1 = ECFlow::get_int(0, lid - 1) * level_capacity + ECFlow::get_int(0, level_capacity - 1);
-                    sid2 = ECFlow::get_int(0, lid - 1) * level_capacity + ECFlow::get_int(0, level_capacity - 1);
+                    sid1 = EvoFlow::get_int(0, lid - 1) * level_capacity + EvoFlow::get_int(0, level_capacity - 1);
+                    sid2 = EvoFlow::get_int(0, lid - 1) * level_capacity + EvoFlow::get_int(0, level_capacity - 1);
 
                     // 保证 sid1 优于 sid2(_orders 最优在前,下标小者更优)
                     if (sid2 < sid1)
@@ -145,5 +141,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { LevelBasedLearningTopology::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { LevelBasedLearningTopology::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(ltopo_levelbased, LearningTopology, levelBasedLearningTopologyEntry());
+    EVOFLOW_REGISTER(ltopo_levelbased, LearningTopology, levelBasedLearningTopologyEntry());
 }

@@ -1,17 +1,18 @@
 //------------------------Description------------------------
 // SetVelocityFeature:包裹每变量一个 SetVelocity(集合速度矩阵),供集合式 PSO(SetPSO)的 setvelocity 特性。
 //   INDIV-COMPOSE S4:把 SetParticle 的集合速度从"子类成员"改为"可挂载特性"(kind "setvelocity")。
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include "feature.h"
 #include "set-velocity.h"
 #include "solution-decoder.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     struct SetVelocityFeature : Feature
     {
@@ -55,7 +56,7 @@ namespace ECFlow
                 v->clear();
                 int cn = v->choice;
                 for (int i = 0; i < v->demension; i++)
-                    v->addToVelocity(i, ECFlow::get_int(0, cn - 1), 1);
+                    v->addToVelocity(i, EvoFlow::get_int(0, cn - 1), 1);
                 v->velocityIndexUpdate();
             }
         }
@@ -67,5 +68,5 @@ namespace ECFlow
             [](const double*) -> Feature* { return new SetVelocityFeature(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(feat_setvelocity, Feature, setVelocityFeatureEntry());
+    EVOFLOW_REGISTER(feat_setvelocity, Feature, setVelocityFeatureEntry());
 }

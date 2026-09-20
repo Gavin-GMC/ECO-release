@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // Problem:问题定义总装类——持有四域 XXDefine,compile() 组合为 ProblemHandle。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <string>
@@ -17,16 +12,16 @@
 #include "problem-handle.h"
 
 // -------------------------------------------------------
-// 域进约束开关(风格沿用 ECFC原代码 ecflow-builder.h 的 ECFLOW_DISABLE_BUILD_VALIDATION)
+// 域进约束开关(风格沿用 ECFC原代码 evoflow-builder.h 的 EVOFLOW_DISABLE_BUILD_VALIDATION)
 // -------------------------------------------------------
 
 // 打开此宏以禁用 compile() **自动为每个决策变量补一条域(range)约束**的行为。
 //   该机制(DOMAIN-CLAMP)使生成路径中的出界值被 constrainCheck 判违 → 交 repairman 夹回。
 //   **禁用的后果**:出界值不再被 constrainCheck 拦截,加性算子(如 Gauss 变异)产出的解可能停留在域外;
 //   同时 `constraintViolation`/`solutionLegality` 将不再反映变量域越界。仅在自行接管域约束时禁用。
-// #define ECFLOW_DISABLE_AUTO_DOMAIN_CONSTRAIN
+// #define EVOFLOW_DISABLE_AUTO_DOMAIN_CONSTRAIN
 
-namespace ECFlow
+namespace EvoFlow
 {
     class Problem
     {
@@ -40,6 +35,7 @@ namespace ECFlow
 
     public:
         explicit Problem(const std::string& problem_name) : _name(problem_name) {}
+        void setName(const std::string& problem_name) { _name = problem_name; }
 
         // ---------------- variable ----------------
         int addConstant(const std::string& name, double* values, int length, int height = 1)
@@ -154,15 +150,16 @@ namespace ECFlow
             //   → 生成路径中出界值(如加性变异 Gauss)被 constrainCheck 判违 → repairman 夹回。
             //   在 _conDef 的**副本**上加、compile 时生成:不污染定义态、重编不累积;range 默认参数自动填当前 [lo,hi];
             //   常量无需域约束,跳过。
+            // v1.4.6.5:
             //   ① **查重** —— 用户已为该变量声明 range 时**不再自动补**。原先"与用户已加的更紧 range 共存"看似无害
             //      (constrainCheck 取交=更紧者),但 `constraintViolation` 是**遍历全部已注册约束累加原始违反量**,
             //      两条 range 会让**同一处越界被算两遍**(consistency-original 的 s2:x 越界 10 → 报 20.6)。
             //   ② **penalty_w 传 0** —— 自动补的约束**仅收缩可行域、不施加惩罚**。注:它 objs 为空、未绑定任何目标,
             //      故本就不进 getPenalty4Object;传 0 是把该意图**写进代码**,避免日后有人给它绑目标时意外双重惩罚。
             //   ③ 违反度**照常计入**(不排除):变量域是用户在 `addVariable(name, lo, hi, ...)` 时**亲手声明**的,
-            //      域外解确实违反了用户的声明。原版 ECFlow 不计入,只因它**根本不检查域**(缺口),非有意语义。
+            //      域外解确实违反了用户的声明。原版 EvoFlow 不计入,只因它**根本不检查域**(缺口),非有意语义。
             ConstrainDefine conDefWithDomain = _conDef;
-#ifndef ECFLOW_DISABLE_AUTO_DOMAIN_CONSTRAIN
+#ifndef EVOFLOW_DISABLE_AUTO_DOMAIN_CONSTRAIN
             for (int i = 0; i < _varDef.getVariableNumber(); i++)
             {
                 if (!_varDef.isDecisionVariable(i)) continue;
@@ -189,14 +186,17 @@ namespace ECFlow
             _compile_check = true;
         }
 
-        // ---------------- accessors (on the definition) ----------------
-        // [已移除] 定义态查询为不必要的新增：原 Problem 无此接口；尺寸/编号/变量 id
-        // 等应在 compile 后经 ProblemHandle 获取。按接口审查移除，保留注释以记录。
-        // int getProblemSize()      const { return 0; }
-        // int getVariableNumber()   const { return _varDef.getVariableNumber(); }
-        // int getObjectiveNumber()  const { return _objDef.getObjectiveNumber(); }
-        // int getConstraintNumber() const { return _conDef.getConstraintNumber(); }
-        // int getHeuristicNumber()  const { return _heuDef.getHeuristicNumber(); }
-        // int getVariableId(const std::string& name) const { return _varDef.getVariableId(name); }
+        // ---------------- definition metadata (no compile) ----------------
+        // 2.3.2.1:问题定义页需要完整回显；元信息属于 Define，不应为展示而构造四个 Manager。
+        ProblemDefinitionInfo describeDefinition() const
+        {
+            ProblemDefinitionInfo info;
+            info.name = _name;
+            info.dimension = _varDef.getProblemSize();
+            info.variables = _varDef.describeVariables();
+            info.objectives = _objDef.describeObjectives();
+            info.constraints = _conDef.describeConstraints();
+            return info;
+        }
     };
 }

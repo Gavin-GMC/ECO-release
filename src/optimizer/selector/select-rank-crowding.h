@@ -1,16 +1,11 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // 环境选择 RankCrowding:合并亲代+子代,非支配排序后逐前沿保留,末层按前沿内拥挤度截断——NSGA-II 的环境选择。
-//   行为名(纪律 4):按"支配 rank + 拥挤度"选择,不绑算法名。
+
 //-------------------------Reference-------------------------
 // K. Deb et al., "A fast and elitist multiobjective genetic algorithm: NSGA-II,"
 // IEEE Trans. Evolutionary Computation, vol. 6, no. 2, pp. 182-197, 2002.
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -20,7 +15,7 @@
 #include "mo-util.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     class RankCrowding final : public EnvirSelect
     {
@@ -100,5 +95,5 @@ namespace ECFlow
             [](const double*) -> EnvirSelect* { return new RankCrowding(); },
             [](AssertList&, const double*) {}, [](AssertList&, const double*) {} };
     }
-    ECFLOW_REGISTER(sel_rankcrowding, EnvirSelect, rankCrowdingEntry());
+    EVOFLOW_REGISTER(sel_rankcrowding, EnvirSelect, rankCrowdingEntry());
 }

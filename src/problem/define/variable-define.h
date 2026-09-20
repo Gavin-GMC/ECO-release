@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // VariableDefine:问题变量域的定义切片(原单体 Problem 的变量部分)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -14,8 +9,9 @@
 #include <stdexcept>
 #include "variable.h"            // ElementNote
 #include "variable-manager.h"     // VariableManager (compile product)
+#include "problem-info.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     enum class VarGenType { constant, decision /*, calculated [未来特性] */ };
 
@@ -82,6 +78,47 @@ namespace ECFlow
         // 供 compile 时"域进约束"用:取第 i 个变量名 / 是否为决策变量(常量无需域约束)
         const std::string& getVariableName(int i) const { return _specs[i].note._name; }
         bool isDecisionVariable(int i) const { return _specs[i].type == VarGenType::decision; }
+        int getProblemSize() const
+        {
+            int size = 0;
+            for (const Spec& s : _specs)
+                if (s.type == VarGenType::decision) size += s.note._length;
+            return size;
+        }
+        std::vector<ProblemVariableInfo> describeVariables() const
+        {
+            std::vector<ProblemVariableInfo> out;
+            out.reserve(_specs.size());
+            for (const Spec& s : _specs)
+            {
+                ProblemVariableInfo v;
+                v.name = s.note._name;
+                v.length = s.note._length;
+                v.kind = (s.type == VarGenType::decision) ? "decision" : "constant";
+                if (s.type == VarGenType::constant)
+                {
+                    v.valueType = "constant";
+                    v.hasBounds = false;
+                }
+                else
+                {
+                    v.hasBounds = true;
+                    v.lowerBound = s.note._lowbound;
+                    v.upperBound = s.note._upbound;
+                    switch (s.note._type)
+                    {
+                    case VariableType::discrete:            v.valueType = "discrete"; break;
+                    case VariableType::allocation:          v.valueType = "allocation"; break;
+                    case VariableType::sequence_direction:  v.valueType = "sequence_direction"; break;
+                    case VariableType::sequence_bidiagraph: v.valueType = "sequence_bidiagraph"; break;
+                    case VariableType::sub_module:          v.valueType = "sub_module"; break;
+                    case VariableType::continuous:          v.valueType = "continuous"; break;
+                    }
+                }
+                out.push_back(std::move(v));
+            }
+            return out;
+        }
 
         // --- compile: definition -> runtime engine ---
         VariableManager compile() const

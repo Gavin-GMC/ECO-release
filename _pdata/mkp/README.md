@@ -9,7 +9,7 @@
 ## 2. 文件位置与加载
 
 - 路径：`_pdata/mkp/<name>.mkp`
-- 加载：`PT_MKP::load("<name>")`（例：`load("gk01")`）；也可传完整/相对路径。
+- 加载：`PT_MKP::load("<name>")`（例：`load("sample")`）；也可传完整/相对路径。
 
 ## 3. 文件格式
 
@@ -40,19 +40,18 @@
 
 ## 4. 样例
 
-标准头（如 `gk01.mkp`）：
+首方最小样例头：
 
 ```
-NAME: gk01
+NAME: sample
 TYPE: MKP
-ITEMS: 100
+ITEMS: 5
 BACKPACKS: 1
-RESOURCES: 15
-OPTIMAL: 3766
+RESOURCES: 2
 PROFIT_SECTION
-  1 51
-  2 79
-  …
+1 10
+2 7
+…
 ```
 
-本目录含多个标准 MKP 实例，可直接 `load("<名>")`。
+程序最小包只带首方 `sample.mkp`；完整数据 overlay 增加 324 个具有明确 MIT 许可证据的 OR-Library 转换实例。GK 实例不再分发，外部下载/转换边界见 [`../../tutorial/external-data/README.md`](../../tutorial/external-data/README.md)。

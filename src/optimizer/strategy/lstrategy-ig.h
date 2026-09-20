@@ -1,29 +1,25 @@
 //------------------------Description------------------------
 // 破坏-重建策略 DestructRebuild(源自 Iterated Greedy):每代把当前解的 **k 个决策"拆掉"**,其余保留,
 //   被拆的维**逐维向问题句柄要贪婪选择**重建 → 得到一个"部分继承 + 部分贪婪重构"的候选。
+
 //-------------------------Reference-------------------------
 // Ruiz, R., Stützle, T. "A simple and effective iterated greedy algorithm for the permutation
 //   flowshop scheduling problem." European Journal of Operational Research, 177(3):2033-2049, 2007.
-// 忠实原文三要素:①**destruction**——随机移除 d 个决策(原文 d 个工件);②**construction**——被移除者逐个
+// 三要素:①**destruction**——随机移除 d 个决策(原文 d 个工件);②**construction**——被移除者逐个
 //   按**贪婪**(最优位置/选择)重新插回;③**acceptance**——优则接受(或常温 Metropolis 式)。
 // 分工:①②由本算子承担;③**由选择器承担**(index(true)=仅更优才接受;indexAnneal=原文 RS 常温接受变体),
 //   与框架"生成/接受"两层分工一致,不塞进算子。可选的局部搜索作为**独立段**追加,不混入本算子。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
 #include <string>
 #include "learning-strategy.h"
-#include "ecflow-rand.h"
+#include "evoflow-rand.h"
 #include "registry.h"
 
-namespace ECFlow
+namespace EvoFlow
 {
     // 破坏 k 维 + 逐维贪婪重建(贪婪来自问题句柄);接受交选择器。
     class DestructRebuild : public LearningStrategy
@@ -82,5 +78,5 @@ namespace ECFlow
             [](AssertList& L, const double* p) { DestructRebuild::preAssert(L, const_cast<double*>(p)); },
             [](AssertList& L, const double* p) { DestructRebuild::postAssert(L, const_cast<double*>(p)); } };
     }
-    ECFLOW_REGISTER(lstrat_destructrebuild, LearningStrategy, destructRebuildEntry());
+    EVOFLOW_REGISTER(lstrat_destructrebuild, LearningStrategy, destructRebuildEntry());
 }

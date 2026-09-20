@@ -1,12 +1,7 @@
-﻿//------------------------Description------------------------
+//------------------------Description------------------------
 // VariableManager:VariableDefine::compile() 的产物——变量域运行期引擎(原扁平句柄的变量切片)。
-//-------------------------Copyright-------------------------
-// Copyright (c) 2024 所有人名称（待确认）, All Rights Reserved.
-// You are free to use the ECFlow（待确认） for research purposes.
-// All publications which use this library or any code in the library
-// should acknowledge the use of "ECFlow" and reference
-// "未确定"
-//-----------------------------------------------------------
+
+// SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
 #include <vector>
@@ -14,7 +9,7 @@
 #include "variable.h"   // ElementNote
 #include "solution.h"   // Solution
 
-namespace ECFlow
+namespace EvoFlow
 {
     // Runtime variable: note + bound address (decision vars alias the solution vector).
     struct RTVariable

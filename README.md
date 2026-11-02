@@ -2,96 +2,102 @@
   <img src="figs/Logo-readme.png" alt="EvoFlow" width="560">
 </p>
 
-> 本版本已完成 Windows 全量回归、发布接口及 Ubuntu WSL 构建与便携接口验证。
+> This release has completed the full Windows regression suite, release interface validation, and Ubuntu WSL build and portable interface validation.
 
 # EvoFlow
 
-EvoFlow 是一个面向组合优化与连续优化的 C++17 演化计算平台。它把问题建模、优化器装配、运行评估和统计分析分离，并通过注册式组件目录组合拓扑、策略、生成器、评价器与选择器。
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-当前公开产品版本为 **3.0.1.5**。配置文件的 `v3.1/v3.2` 以及结果、过程文件的格式版本是独立协议版本，不随产品版本改写。
+EvoFlow is a C++17 evolutionary computation platform for combinatorial and continuous optimization. It separates problem modeling, optimizer assembly, execution and evaluation, and statistical analysis. A registry-based component catalog lets you combine topologies, strategies, generators, evaluators, and selectors.
 
-## 支持范围
+The current public product version is **3.0.1.6**. Configuration versions `v3.1/v3.2` and the format versions of result and execution-history files are independent protocol versions; they do not change with the product version.
 
-| 能力 | 当前验证范围 |
+Version 3.0.1.6 updates the documentation and source version metadata. Existing prebuilt executables, Python native modules, and download archives remain at 3.0.1.5; this update does not rebuild or republish them.
+
+## Platform Support
+
+| Capability | Current validation scope |
 |---|---|
-| Windows 命令行、图形界面、模型连接 | Windows x64 |
-| Windows Python 预编译包 | Windows x64，64 位 CPython 3.8–3.12 |
-| Linux C++ 核心与命令行 | 已在 Ubuntu 24.04.4 WSL2 x86_64、GCC 13.3、CMake 3.28.3、Ninja 1.11.1 完成源码构建与运行验证；不提供 Linux 预编译发布包 |
-| Linux Python 接口 | 已在上述环境以 CPython 3.12.3 完成源码构建和可移植测试；不提供 Linux 预编译模块，也不承诺跨 Python 小版本二进制兼容 |
-| Linux 图形界面和模型连接 | 当前不支持 |
-| macOS | 未验证，不作支持承诺 |
+| Windows command line, GUI, and model integration | Windows x64 |
+| Prebuilt Windows Python package | Windows x64, 64-bit CPython 3.8–3.12 |
+| Linux C++ core and command line | Built from source and validated on Ubuntu 24.04.4 WSL2 x86_64 with GCC 13.3, CMake 3.28.3, and Ninja 1.11.1; no prebuilt Linux release package is provided |
+| Linux Python interface | Built from source and passed portability tests with CPython 3.12.3 in the environment above; no prebuilt Linux modules are provided, and binary compatibility across Python minor versions is not guaranteed |
+| Linux GUI and model integration | Currently unsupported |
+| macOS | Not validated; no support commitment |
 
-## 快速开始
+## Quick Start
 
-在 Windows 上双击 `evoflow.exe`，或在项目目录执行：
+On Windows, double-click `evoflow.exe`, or run the following from the project directory:
 
 ```text
 evoflow
 ```
 
-程序会启动本地服务并打开图形界面，可用于定义或加载问题、构筑优化器、运行当前配置以及分析实验结果。
+The program starts a local service and opens the GUI, where you can define or load problems, assemble optimizers, run the current configuration, and analyze experimental results.
 
-命令行运行单个问题与配置：
+Run a single problem with a configuration from the command line:
 
 ```text
-evoflow run <问题文件> <配置文件>
+evoflow run <problem-file> <config-file>
 ```
 
-查看产品版本：
+Display the product version:
 
 ```text
 evoflow --version
 ```
 
-检查最小/完整数据包：
+Check the minimal/full data packages:
 
 ```text
 evoflow data
 python -m evoflow --check-data
 ```
 
-完整参数见 [可执行程序手册](docs/手册/13-使用-可执行程序.md)。
+For all command-line options, see the [Executable Guide](docs/manual/13-command-line.md).
 
-## Windows 发布资产
+## Windows Release Assets
 
-Windows x64 发布提供三个相互独立但可组合的 ZIP：
+The Windows x64 release provides three separate ZIP archives that can be used together:
 
-- `EvoFlow-3.0.1.5-windows-x64.zip`：程序、公开 C++/Python 源码、五个 CPython 3.8–3.12 原生模块、配置、教程、文档和 13 个首方最小样例；
-- `EvoFlow-3.0.1.5-data-minimal.zip`：可单独取得的同一组 13 个首方样例；
-- `EvoFlow-3.0.1.5-data-full.zip`：701 个许可状态明确的额外实例 overlay。
+- `EvoFlow-3.0.1.5-windows-x64.zip`: the executable, public C++/Python source code, five native modules for CPython 3.8–3.12, configurations, tutorials, documentation, and 13 first-party minimal examples.
+- `EvoFlow-3.0.1.5-data-minimal.zip`: the same 13 first-party examples, available separately.
+- `EvoFlow-3.0.1.5-data-full.zip`: an optional overlay containing 701 additional instances with verified licensing status.
 
-每个 ZIP 都有同名 `.sha256`。程序包解压后可直接运行 `evoflow.exe`；需要完整数据时，再把 full ZIP 解压到同一目录。正式程序树带 `release-manifest.json`，记录除 manifest 自身外每个文件的字节数和 SHA-256。
+Each ZIP has a matching `.sha256` file. After extracting the program archive, you can run `evoflow.exe` directly. To add the full dataset, extract the full ZIP into the same directory. The release tree includes `release-manifest.json`, which records the byte size and SHA-256 hash of every file except the manifest itself.
 
-## 文档
+## Documentation
 
-- [项目总览](docs/手册/00-总览.md)
-- [图形界面](docs/手册/14-使用-图形界面.md)
-- [Python 接口](docs/手册/15-使用-Python接口.md)
-- [问题模块](docs/手册/10-使用-问题模块.md)
-- [优化器配置](docs/手册/11-使用-优化器配置.md)
-- [结果分析](docs/手册/12-使用-结果分析.md)
-- [数据包与外部数据](docs/数据包与外部数据.md)
-- [EvoFlow 3.0.1.5 发布日志](发布日志.md)
-- [未来更新计划](未来更新计划.md)
-- [源码构建入口](build/README.md)
-- [开发架构与流程](docs/手册/20-开发-架构与流程.md)
-- [完整用户手册索引](docs/手册/README.md)
+The user and developer manuals are available in English. Data-package, build, release-note, and roadmap documents linked below remain in Chinese.
 
-## 从源码构建
+- [Project Overview](docs/manual/00-overview.md)
+- [Graphical User Interface](docs/manual/14-gui.md)
+- [Python Interface](docs/manual/15-python.md)
+- [Problem Modules](docs/manual/10-problems.md)
+- [Optimizer Configuration](docs/manual/11-optimizer-configuration.md)
+- [Result Analysis](docs/manual/12-analysis.md)
+- [Data Packages and External Data](docs/数据包与外部数据.md)
+- [EvoFlow 3.0.1.6 Release Notes](发布日志.md)
+- [Roadmap](未来更新计划.md)
+- [Building from Source](build/README.md)
+- [Development Architecture and Workflow](docs/manual/20-architecture.md)
+- [Complete User Manual Index](docs/manual/README.md)
+
+## Building from Source
 
 ```text
 cmake -S . -B obj-cmake-release
 cmake --build obj-cmake-release --config Release
 ```
 
-也可以使用 `build/cmake/` 入口，或在 Visual Studio 2022 中打开 `build/vs/evoflow.sln`；详细说明见 [源码构建入口](build/README.md)。`build/` 保存可发布的工程入口，生成文件应放在可删除的 `obj-*` 目录。
+You can also use the entry point under `build/cmake/`, or open `build/vs/evoflow.sln` in Visual Studio 2022. See [Building from Source](build/README.md) for details. The `build/` directory contains distributable build project files; generated files should go into disposable `obj-*` directories.
 
-Windows 发布候选由独立干净暂存树通过 Visual Studio 2022/CMake 构建；`evoflow.exe` 使用 `/MT`，不要求另装 VC++ 可再发行运行时。Python 不加入 CMake，预编译模块仍由独立 Python 构建入口生成。
+Windows release candidates are built from a separate, clean staging tree using Visual Studio 2022/CMake. The `evoflow.exe` executable uses `/MT` and does not require a separately installed Visual C++ Redistributable. Python is not part of the CMake build; prebuilt Python modules are generated through a separate Python build entry point.
 
-发布目录中的 `figs/Logo.png` 供图形界面使用；README 使用由同一原图纯裁剪生成的 `figs/Logo-readme.png`，仅去除上下空白。移动 `evoflow.exe` 时，请保留同级 `figs` 目录。
+In the release directory, `figs/Logo.png` is used by the GUI. This README uses `figs/Logo-readme.png`, which is cropped from the same original image solely to remove blank space above and below it. When moving `evoflow.exe`, keep the `figs` directory alongside it.
 
-## 许可与外部组件
+## License and External Components
 
-EvoFlow 自有源码采用 [BSD 3-Clause License](LICENSE)。外部组件的版本、版权及许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+EvoFlow's own source code is licensed under the [BSD 3-Clause License](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for external component versions, copyright notices, and licenses.
 
-自 `v3` 起，源码树、构建、公开 API 和发布物均不包含 CEC2013 竞赛基准。用户如已自行合法取得外部 benchmark，可通过 [`tutorial/7.external-benchmark.cpp`](tutorial/7.external-benchmark.cpp) 的 C++ functor 边界或 [`python/examples/external_benchmark.py`](python/examples/external_benchmark.py) 的 Python callable 接入；现成 `evoflow.exe`/图形界面不会动态加载任意外部原生库。
+Since `v3`, the source tree, builds, public APIs, and release artifacts have excluded the CEC2013 competition benchmarks. If you have independently obtained an external benchmark lawfully, you can integrate it through the C++ functor interface in [`tutorial/7.external-benchmark.cpp`](tutorial/7.external-benchmark.cpp) or the Python callable interface in [`python/examples/external_benchmark.py`](python/examples/external_benchmark.py). The prebuilt `evoflow.exe` and GUI do not dynamically load arbitrary external native libraries.
